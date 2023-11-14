@@ -21,7 +21,11 @@ class Decoder(nn.Module):
         self.output_size = output_size      
         self.embedding = nn.Embedding(output_size, emb_size)
         self.rnn = RNN(emb_size + hidden_size, hidden_size, num_layers, device)
+<<<<<<< HEAD
         self.fc_out = nn.Linear(emb_size + hidden_size * 2, output_size)
+=======
+        self.fc_out = nn.Linear(emb_dim + hidden_size * 2, output_size)
+>>>>>>> 7920127 (test)
         self.dropout = nn.Dropout(dropout_proba)
         
     def forward(self, input, hidden, context):   
