@@ -78,7 +78,7 @@ def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
 
     plt.xlabel('Sentence Length')
     plt.ylabel('BLEU score')
-    plt.legend()
+    plt.legend(loc='lower left')
 
     # Save or display the plot
     if save_path:
