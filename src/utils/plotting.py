@@ -1,10 +1,10 @@
 from typing import Dict, Any, Tuple, List
+import os
 import numpy as np
 from matplotlib import pyplot as plt
 
 
-
-def plot_alignment(data: Dict[str, Tuple[List[str], List[str], np.ndarray]]) -> None:
+def plot_alignment(data: Dict[str, Tuple[List[str], List[str], np.ndarray]], save_path: str = None) -> None:
     """
     Plot alignment for each pair of phrases.
 
@@ -12,6 +12,7 @@ def plot_alignment(data: Dict[str, Tuple[List[str], List[str], np.ndarray]]) -> 
     - data: Dictionary containing alignment data for each pair of phrases.
             Key: Pair identifier
             Value: Tuple containing two lists of phrases and a 2D numpy array representing the alignment.
+    - save_path: Optional parameter for the file name to save the figure. If None, the plot is displayed but not saved.
 
     Returns:
     - None
@@ -47,6 +48,43 @@ def plot_alignment(data: Dict[str, Tuple[List[str], List[str], np.ndarray]]) -> 
         # Set title for the subplot
         ax.set_title(key, y=-0.1)
 
-    # Display the plot
-    plt.show()
+    # Save or display the plot
+    if save_path:
+        save_dir = "plots"
+        os.makedirs(save_dir, exist_ok=True)
+        save_file = os.path.join(save_dir, save_path)
+        plt.savefig(save_file)
+    else:
+        plt.show()
 
+
+def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
+    """
+    Plot BLEU score for each epoch.
+
+    Parameters:
+    - data: Dictionary containing BLEU score for each epoch.
+            Key: Epoch number
+            Value: BLEU score
+    - save_path: Optional parameter for the file name to save the figure. If None, the plot is displayed but not saved.
+
+    Returns:
+    - None
+    """
+    plotting_styles = ['-', '--', '-.', ':']
+
+    for i, (key, values) in enumerate(data.items()):
+        plt.plot(values, plotting_styles[i % len(plotting_styles)], label=key) 
+
+    plt.xlabel('Sentence Length')
+    plt.ylabel('BLEU score')
+    plt.legend()
+
+    # Save or display the plot
+    if save_path:
+        save_dir = "plots"
+        os.makedirs(save_dir, exist_ok=True)
+        save_file = os.path.join(save_dir, save_path)
+        plt.savefig(save_file)
+    else:
+        plt.show()
