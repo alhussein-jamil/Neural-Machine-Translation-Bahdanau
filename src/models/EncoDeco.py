@@ -1,5 +1,7 @@
 import torch.nn as nn
-import rnn
+from rnn import RNN
+import torch
+
 class Encoder(nn.Module):
     def __init__(self, input_size, emb_size, hidden_size, num_layers, device, dropout_proba):
         super().__init__()
