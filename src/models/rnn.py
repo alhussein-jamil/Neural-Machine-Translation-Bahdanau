@@ -1,5 +1,6 @@
-import torch.nn as nn
+from torch import nn
 import torch
+
 
 class RNN(nn.Module):
     """
@@ -24,7 +25,9 @@ class RNN(nn.Module):
 
     """
 
-    def __init__(self, input_size, hidden_size, num_layers, device, activation="tanh", dropout=0):
+    def __init__(
+        self, input_size, hidden_size, num_layers, device, activation="tanh", dropout=0
+    ):
         """
         Initializes the RNN module.
 
@@ -42,7 +45,14 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, nonlinearity=activation, batch_first=True, dropout=dropout).to(self.device)
+        self.rnn = nn.RNN(
+            input_size,
+            hidden_size,
+            num_layers,
+            nonlinearity=activation,
+            batch_first=True,
+            dropout=dropout,
+        ).to(self.device)
 
     def forward(self, x):
         """

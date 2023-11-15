@@ -3,13 +3,14 @@ from torch import nn
 from typing import List, Tuple, Dict, Any
 
 class FCNN(nn.Module):
-    def __init__(self, input_size: int, hidden_sizes: List[int], output_size: int, device: str, activation: str = "tanh", dropout: float = 0):
+    def __init__(self, input_size: int, hidden_sizes: List[int], output_size: int, device: str, activation: nn.Module = nn.Tanh(), last_layer_activation: nn.Module = nn.Identity(), dropout: float = 0):
         super(FCNN, self).__init__()
 
         self.device = device
         self.input_size = input_size
         self.hidden_sizes = hidden_sizes
         self.output_size = output_size
+        self.last_layer_activation = last_layer_activation
 
         # Create a list of fully-connected layers
         self.fc = nn.ModuleList()
@@ -27,7 +28,7 @@ class FCNN(nn.Module):
         self.fc = self.fc.to(self.device)
 
         # Add the activation function
-        self.activation = nn.Tanh() if activation == "tanh" else nn.ReLU()
+        self.activation = activation
 
         # Add the dropout layer
         self.dropout = nn.Dropout(dropout)
@@ -55,5 +56,6 @@ class FCNN(nn.Module):
 
         # Apply the final fully-connected layer
         x = self.fc[-1](x)
+        x = self.last_layer_activation(x)    
 
         return x

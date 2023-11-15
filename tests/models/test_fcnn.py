@@ -1,5 +1,6 @@
 from models.fcnn import FCNN
 import torch
+from torch import nn
 
 if __name__ == "__main__":
     device = 'cpu' if not torch.cuda.is_available() else 'cuda'
@@ -8,7 +9,7 @@ if __name__ == "__main__":
         hidden_sizes=[10,10],
         output_size=10,
         device=device,
-        activation='relu',
+        activation=nn.ReLU(),
         dropout=0.5,
     )
     print(model)
