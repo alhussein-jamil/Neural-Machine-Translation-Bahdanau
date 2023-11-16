@@ -1,6 +1,6 @@
 
 import numpy as np
-from utils.plotting import plot_alignment, BELU_score_plot
+from utils.plotting import plot_alignment, BELU_score_plot, print_table
 
 if __name__ == "__main__":
     english_ex = ["The" , "Cat", "Sat", "On", "The", "Mat"]
@@ -23,3 +23,10 @@ if __name__ == "__main__":
     }
 
     BELU_score_plot(scores)
+
+
+    x = ["Model", "All", "No UNK"]
+    y = ["RNNencdec-30","RNNsearch-30", "RNNencdec-50", "RNNsearch-50", "RNNsearch-50*", "MOSES"]
+    data = np.random.rand(6,2)
+
+    print_table(x,y,data)

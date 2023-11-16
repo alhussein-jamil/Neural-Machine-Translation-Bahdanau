@@ -88,3 +88,41 @@ def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
         plt.savefig(save_file)
     else:
         plt.show()
+
+def print_table(x : List[str], y: List[str], data:np.ndarray):
+    """
+    Print a table with the alignment between two phrases in a markdown format.
+
+    Parameters:
+    - x: List of words in the first phrase.
+    - y: List of words in the second phrase.
+    - data: 2D numpy array representing the alignment.
+
+    Returns:
+    - None
+    """
+    # Print the table header
+    print("|", end="")
+    for word in x:
+        print(f" {word} |", end="")
+    print()
+
+    # Print the separator
+    print("|-", end="")
+    for _ in x:
+        print("-|-" if _ != x[-1] else "-|", end="")
+    print()
+
+    # Print the table body
+    for i, word in enumerate(y):
+        print(f"| {word} |", end="")
+        for j in range(len(x)-1):
+            print(f" {data[i, j]:.2f} |", end="")
+        print()
+
+    # Print the separator
+    print("|-", end="")
+    for _ in x:
+        print("-|-" if _ != x[-1] else "-|", end="")
+    print()
+    

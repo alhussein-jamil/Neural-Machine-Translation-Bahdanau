@@ -12,3 +12,4 @@ black
 isort
 pylint
 pytest
+mosestokenizer
