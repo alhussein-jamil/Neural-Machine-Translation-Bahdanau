@@ -44,7 +44,7 @@ class RNN(nn.Module):
         self.device = device
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-
+        self.input_size = input_size
         self.rnn = nn.RNN(
             input_size,
             hidden_size,

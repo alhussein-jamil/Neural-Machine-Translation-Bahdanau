@@ -1,6 +1,6 @@
 import torch.nn as nn
-from rnn import RNN  # Importe un module RNN externe
 import torch
+import torch.nn.functional as F
 
 # Définition de la classe Seq2Seq qui hérite de nn.Module
 class Seq2Seq(nn.Module):
