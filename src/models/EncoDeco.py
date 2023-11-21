@@ -1,5 +1,5 @@
 import torch.nn as nn
-from models.rnn import RNN
+from rnn import RNN
 import torch
 import torch.nn.functional as F
 
@@ -9,7 +9,7 @@ class Encoder(nn.Module):
 
         self.hidden_size = hidden_size      
         self.embedding = nn.Embedding(input_size, emb_size)     
-        self.rnn = RNN(emb_size, hidden_size, num_layers, device)  
+        self.rnn = RNN(emb_size, hidden_size, num_layers, device, dropout= dropout_proba)  
         self.dropout = nn.Dropout(dropout_proba)
         
     def forward(self, source):               
@@ -28,7 +28,7 @@ class Decoder(nn.Module):
         self.embedding = nn.Embedding(output_size, emb_size)
 
         # Couche RNN avec concaténation d'embedding et de l'état caché précédent
-        self.rnn = RNN(emb_size + hidden_size, hidden_size, num_layers, device)
+        self.rnn = RNN(emb_size + hidden_size, hidden_size, num_layers, device ,dropout_proba, activation="tanh")
 
         # Couche linéaire de sortie avec concaténation d'embedding, de l'état caché et du contexte
         self.fc_out = nn.Linear(emb_size + hidden_size * 2, output_size)
@@ -59,10 +59,10 @@ class Decoder(nn.Module):
 
 
 class Encoder_RNNSearch(nn.Module):
-    def __init__(self, input_size, emb_size, enc_hidden_size, dec_hidden_size,  num_layers, device, dropout_proba):
+    def __init__(self, input_size, emb_size, enc_hidden_size, dec_hidden_size,  num_layers, device, dropout_proba, activation="tanh"):
         super().__init__()       
         self.embedding = nn.Embedding(input_size, emb_size)
-        self.rnn = RNN(emb_size, enc_hidden_size,  num_layers, device, bidirectional = True)
+        self.rnn = RNN(emb_size, enc_hidden_size,  num_layers, device,  dropout_proba, bidirectional = True, activation="tanh")
         self.fc = nn.Linear(enc_hidden_size * 2, dec_hidden_size)
         self.dropout = nn.Dropout(dropout_proba)
         
@@ -73,7 +73,7 @@ class Encoder_RNNSearch(nn.Module):
         return outputs, hidden
 
 class Decoder_RNNSearch(nn.Module):
-    def __init__(self, output_size, emb_size, enc_hidden_size, dec_hidden_size, num_layers, device, dropout_proba, attention):
+    def __init__(self, output_size, emb_size, enc_hidden_size, dec_hidden_size, num_layers, device, dropout_proba, attention, activation="tanh"):
         super().__init__()
 
         # Définition des attributs
@@ -84,7 +84,7 @@ class Decoder_RNNSearch(nn.Module):
         self.embedding = nn.Embedding(output_size, emb_size)
 
         # Couche RNN avec bidirectionnel et concaténation d'embedding et du contexte pondéré
-        self.rnn = RNN((enc_hidden_size * 2) + emb_size, dec_hidden_size, num_layers, device, bidirectional = True)
+        self.rnn = RNN((enc_hidden_size * 2) + emb_size, dec_hidden_size, num_layers, device,  dropout_proba, bidirectional = True, activation="tanh")
         
         # Couche linéaire de sortie avec concaténation d'embedding, de l'état caché et du contexte pondéré
         self.fc_out = nn.Linear((enc_hidden_size * 2) + dec_hidden_size + emb_size, output_size) 
@@ -144,3 +144,11 @@ class Attention(nn.Module):
         # Normalisation de l'attention avec softmax
         attention = self.v(energy).squeeze(2)
         return F.softmax(attention, dim=1)
+    
+
+    
+
+
+
+
+
