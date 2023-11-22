@@ -1,12 +1,6 @@
 #test
-
-
-from enco_deco import Encoder
+from models.enco_deco import Encoder, Decoder
 import torch
-
-
-
-print("hi")
 
 input_size = 1000
 emb_size = 256
@@ -28,3 +22,28 @@ hidden_state = encoder(input_data)
 
 # Afficher la taille du tenseur résultant
 print("Hidden state size:", hidden_state.size())
+
+
+
+# Paramètres du modèle
+output_size = 100  # Remplacez par la taille de votre vocabulaire de sortie
+emb_size = 50
+hidden_size = 64
+num_layers = 2
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dropout_proba = 0.1
+
+# Création du décodeur
+decoder = Decoder(output_size, emb_size, hidden_size, num_layers, device, dropout_proba)
+
+# Test avec une séquence factice
+input_sequence = torch.tensor([1, 2, 3, 4]).unsqueeze(0).to(device)  
+initial_hidden = torch.zeros(num_layers, 1, hidden_size).to(device)
+
+# Forward pass
+output, new_hidden = decoder(input_sequence, initial_hidden, None)
+
+# Affichage des résultats
+print("Input sequence:", input_sequence)
+print("Output sequence:", torch.argmax(output, dim=2))
+print("New hidden state:", new_hidden)
