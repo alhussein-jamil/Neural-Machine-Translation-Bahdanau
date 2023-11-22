@@ -37,26 +37,37 @@ class Decoder(nn.Module):
         # Couche de dropout pour la régularisation
         self.dropout = nn.Dropout(dropout_proba).to(device) 
         self.device = device
+        #self.context= context
         
-    def forward(self, input, hidden, context):   
+    def forward(self, input, hidden,context):   
         # Ajoute une dimension pour traiter chaque élément de la séquence individuellement
         input = input.unsqueeze(0) # ajoute une dimension pour traiter chaque element de la séquence individuellement        
         
         # Conversion de l'indice en vecteur d'embedding avec dropout
         embedded = self.dropout(self.embedding(input))
-        if context is None:
-            context = torch.zeros_like(embedded)  # Ou tout autre mécanisme d'initialisation
 
+        if context is None:
+            context = torch.zeros_like(embedded) 
 
         # Concaténation de l'embedding et du contexte
-        emb_con = torch.cat((embedded, context), dim = 2)    
+        emb_con = torch.cat((embedded, context), dim = 2)     
+
 
         # Passage à travers la couche RNN avec mise à jour de l'état caché        
-        output, hidden = self.rnn(emb_con, hidden)
+        output, hidden = self.rnn(emb_con)
+        
+        # Ajuster la dimensions
+        hidden = hidden.squeeze(0)
+        context = context.expand_as(hidden)
+        embedded= embedded.expand_as(hidden) 
+
+        print("Embedded shape:", embedded.squeeze(0).shape)
+        print("Hidden shape:", hidden.squeeze(0).shape)
+        print("Context shape:", context.squeeze(0).shape)
 
         # Concaténation de l'embedding, de l'état caché et du contexte pour la couche de sortie
         output = torch.cat((embedded.squeeze(0), hidden.squeeze(0), context.squeeze(0)), 
-                           dim = 1)
+                           dim = -1)
         
         # Prédiction avec la couche linéaire de sortie
         prediction = self.fc_out(output)  
@@ -64,10 +75,10 @@ class Decoder(nn.Module):
 
 
 class Encoder_RNNSearch(nn.Module):
-    def __init__(self, input_size, emb_size, enc_hidden_size, dec_hidden_size,  num_layers, device, dropout_proba, activation="tanh"):
+    def __init__(self, input_size, emb_size, enc_hidden_size, dec_hidden_size,  num_layers, device, dropout_proba):
         super().__init__()       
         self.embedding = nn.Embedding(input_size, emb_size).to(device) 
-        self.rnn = RNN(emb_size, enc_hidden_size,  num_layers, device,  dropout_proba, bidirectional = True, activation="tanh")
+        self.rnn = RNN(emb_size, enc_hidden_size,  num_layers, device,  dropout_proba, bidirectional = True)
         self.fc = nn.Linear(enc_hidden_size * 2, dec_hidden_size).to(device) 
         self.dropout = nn.Dropout(dropout_proba).to(device) 
         self.device = device
@@ -79,7 +90,7 @@ class Encoder_RNNSearch(nn.Module):
         return outputs, hidden
 
 class Decoder_RNNSearch(nn.Module):
-    def __init__(self, output_size, emb_size, enc_hidden_size, dec_hidden_size, num_layers, device, dropout_proba, attention, activation="tanh"):
+    def __init__(self, output_size, emb_size, enc_hidden_size, dec_hidden_size, num_layers, device, dropout_proba, attention):
         super().__init__()
 
         # Définition des attributs
@@ -90,7 +101,7 @@ class Decoder_RNNSearch(nn.Module):
         self.embedding = nn.Embedding(output_size, emb_size).to(device) 
 
         # Couche RNN avec bidirectionnel et concaténation d'embedding et du contexte pondéré
-        self.rnn = RNN((enc_hidden_size * 2) + emb_size, dec_hidden_size, num_layers, device,  dropout_proba, bidirectional = True, activation="tanh")
+        self.rnn = RNN((enc_hidden_size * 2) + emb_size, dec_hidden_size, num_layers, device,  dropout_proba, bidirectional = True)
         
         # Couche linéaire de sortie avec concaténation d'embedding, de l'état caché et du contexte pondéré
         self.fc_out = nn.Linear((enc_hidden_size * 2) + dec_hidden_size + emb_size, output_size).to(device) 
