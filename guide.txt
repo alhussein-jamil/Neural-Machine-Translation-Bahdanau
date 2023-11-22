@@ -1,0 +1,3 @@
+git stash : enregistrer les modifs
+git pull 
+git stash apply : appliquer les modifs 
