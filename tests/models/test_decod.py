@@ -1,7 +1,7 @@
 #test
 
 
-from enco_deco import Encoder
+from models.enco_deco import Encoder
 import torch
 
 

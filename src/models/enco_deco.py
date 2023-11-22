@@ -1,5 +1,5 @@
 import torch.nn as nn
-from rnn import RNN
+from .rnn import RNN
 import torch
 import torch.nn.functional as F
 
