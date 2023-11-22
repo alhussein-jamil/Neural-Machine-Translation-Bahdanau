@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-
+import random
 # Définition de la classe Seq2Seq qui hérite de nn.Module
 class Seq2Seq(nn.Module):
     def __init__(self, encoder, decoder, device):

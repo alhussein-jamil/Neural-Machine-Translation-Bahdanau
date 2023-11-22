@@ -2,7 +2,6 @@ import unittest
 import torch
 from torch import nn
 from rnn import RNN
-
 class TestRNN(unittest.TestCase):
     def setUp(self):
         # Define parameters for testing

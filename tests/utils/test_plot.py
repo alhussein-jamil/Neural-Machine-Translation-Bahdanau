@@ -1,6 +1,6 @@
 
 import numpy as np
-from utils.plotting import plot_alignment, BELU_score_plot, print_table
+from plotting import plot_alignment, BELU_score_plot, print_table
 
 if __name__ == "__main__":
     english_ex = ["The" , "Cat", "Sat", "On", "The", "Mat"]
