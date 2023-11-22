@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch
-import torch.nn.functional as F
 
 # Définition de la classe Seq2Seq qui hérite de nn.Module
 class Seq2Seq(nn.Module):

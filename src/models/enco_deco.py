@@ -8,13 +8,14 @@ class Encoder(nn.Module):
         super().__init__()
 
         self.hidden_size = hidden_size      
-        self.embedding = nn.Embedding(input_size, emb_size)     
+        self.embedding = nn.Embedding(input_size, emb_size).to(device) 
         self.rnn = RNN(emb_size, hidden_size, num_layers, device, dropout= dropout_proba)  
-        self.dropout = nn.Dropout(dropout_proba)
+        self.dropout = nn.Dropout(dropout_proba).to(device)
+        self.device = device
         
     def forward(self, source):               
         embedded = self.dropout(self.embedding(source))
-        outputs, hidden = self.rnn(embedded)     
+        output, hidden = self.rnn(embedded)     
         return hidden
 
 class Decoder(nn.Module):

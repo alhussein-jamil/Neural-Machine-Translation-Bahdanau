@@ -26,7 +26,7 @@ class RNN(nn.Module):
     """
 
     def __init__(
-        self, input_size, hidden_size, num_layers, device, activation="tanh", dropout=0
+        self, input_size, hidden_size, num_layers, device, activation="tanh", dropout=0, bidirectional=False
     ):
         """
         Initializes the RNN module.
@@ -52,6 +52,7 @@ class RNN(nn.Module):
             nonlinearity=activation,
             batch_first=True,
             dropout=dropout,
+            bidirectional=bidirectional,
         ).to(self.device)
 
     def forward(self, x):
@@ -68,6 +69,6 @@ class RNN(nn.Module):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(self.device)
 
         # Forward propagate RNN
-        out, _ = self.rnn(x, h0)
+        out, hidden = self.rnn(x, h0)
 
-        return out
+        return out, hidden

@@ -1,7 +1,8 @@
 import unittest
 import torch
 from torch import nn
-from models.fcnn import FCNN
+from fcnn import FCNN
+
 class TestFCNN(unittest.TestCase):
     def setUp(self):
         # Define parameters for testing

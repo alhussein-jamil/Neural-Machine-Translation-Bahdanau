@@ -1,7 +1,7 @@
 import unittest
 import torch
 from torch import nn
-from models.rnn import RNN
+from rnn import RNN
 
 class TestRNN(unittest.TestCase):
     def setUp(self):
@@ -40,8 +40,9 @@ class TestRNN(unittest.TestCase):
     def test_forward_pass(self):
         # Check if the forward pass runs without errors
         input_tensor = torch.randn(32, 5, self.input_size).to(self.device)
-        output_tensor = self.model(input_tensor)
+        output_tensor, hidden_tensor = self.model(input_tensor)
         self.assertEqual(output_tensor.shape, torch.Size([32, 5, self.hidden_size]))
+        self.assertEqual(hidden_tensor.shape, torch.Size([self.num_layers, 32, self.hidden_size]))
 
 if __name__ == '__main__':
     unittest.main()

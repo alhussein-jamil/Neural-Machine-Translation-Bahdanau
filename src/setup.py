@@ -3,4 +3,5 @@ setup(
     name="mla",
     package = find_packages(),
     version="0.1",
+    py_modules=[],
 )

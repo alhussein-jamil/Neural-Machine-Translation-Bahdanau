@@ -1,7 +1,9 @@
 #test
 
 
-from src.models.EncoDeco import *
+from enco_deco import Encoder
+import torch
+
 
 
 print("hi")
