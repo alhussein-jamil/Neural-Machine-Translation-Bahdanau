@@ -1,5 +1,5 @@
-data/
 plots/
 *egg-info
 *cpython*
 *__pycache__*
+data/t*
