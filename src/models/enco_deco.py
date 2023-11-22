@@ -1,5 +1,5 @@
 import torch.nn as nn
-from rnn import RNN
+from models.rnn import RNN
 import torch
 import torch.nn.functional as F
 
@@ -26,16 +26,17 @@ class Decoder(nn.Module):
         self.output_size = output_size
 
         # Couche d'embedding pour convertir les indices en vecteurs
-        self.embedding = nn.Embedding(output_size, emb_size)
+        self.embedding = nn.Embedding(output_size, emb_size).to(device) 
 
         # Couche RNN avec concaténation d'embedding et de l'état caché précédent
-        self.rnn = RNN(emb_size + hidden_size, hidden_size, num_layers, device ,dropout_proba, activation="tanh")
+        self.rnn = RNN(emb_size + hidden_size, hidden_size, num_layers, device ,dropout=dropout_proba)
 
         # Couche linéaire de sortie avec concaténation d'embedding, de l'état caché et du contexte
-        self.fc_out = nn.Linear(emb_size + hidden_size * 2, output_size)
+        self.fc_out = nn.Linear(emb_size + hidden_size * 2, output_size).to(device) 
 
         # Couche de dropout pour la régularisation
-        self.dropout = nn.Dropout(dropout_proba)
+        self.dropout = nn.Dropout(dropout_proba).to(device) 
+        self.device = device
         
     def forward(self, input, hidden, context):   
         # Ajoute une dimension pour traiter chaque élément de la séquence individuellement
@@ -43,6 +44,9 @@ class Decoder(nn.Module):
         
         # Conversion de l'indice en vecteur d'embedding avec dropout
         embedded = self.dropout(self.embedding(input))
+        if context is None:
+            context = torch.zeros_like(embedded)  # Ou tout autre mécanisme d'initialisation
+
 
         # Concaténation de l'embedding et du contexte
         emb_con = torch.cat((embedded, context), dim = 2)    
@@ -62,10 +66,11 @@ class Decoder(nn.Module):
 class Encoder_RNNSearch(nn.Module):
     def __init__(self, input_size, emb_size, enc_hidden_size, dec_hidden_size,  num_layers, device, dropout_proba, activation="tanh"):
         super().__init__()       
-        self.embedding = nn.Embedding(input_size, emb_size)
+        self.embedding = nn.Embedding(input_size, emb_size).to(device) 
         self.rnn = RNN(emb_size, enc_hidden_size,  num_layers, device,  dropout_proba, bidirectional = True, activation="tanh")
-        self.fc = nn.Linear(enc_hidden_size * 2, dec_hidden_size)
-        self.dropout = nn.Dropout(dropout_proba)
+        self.fc = nn.Linear(enc_hidden_size * 2, dec_hidden_size).to(device) 
+        self.dropout = nn.Dropout(dropout_proba).to(device) 
+        self.device = device
         
     def forward(self, source):
         embedded = self.dropout(self.embedding(source))  
@@ -82,16 +87,17 @@ class Decoder_RNNSearch(nn.Module):
         self.attention = attention   
         
         # Couche d'embedding pour convertir les indices en vecteurs
-        self.embedding = nn.Embedding(output_size, emb_size)
+        self.embedding = nn.Embedding(output_size, emb_size).to(device) 
 
         # Couche RNN avec bidirectionnel et concaténation d'embedding et du contexte pondéré
         self.rnn = RNN((enc_hidden_size * 2) + emb_size, dec_hidden_size, num_layers, device,  dropout_proba, bidirectional = True, activation="tanh")
         
         # Couche linéaire de sortie avec concaténation d'embedding, de l'état caché et du contexte pondéré
-        self.fc_out = nn.Linear((enc_hidden_size * 2) + dec_hidden_size + emb_size, output_size) 
+        self.fc_out = nn.Linear((enc_hidden_size * 2) + dec_hidden_size + emb_size, output_size).to(device) 
 
         # Couche de dropout pour la régularisation
-        self.dropout = nn.Dropout(dropout_proba)
+        self.dropout = nn.Dropout(dropout_proba).to(device) 
+        self.device = device
         
     def forward(self, input, hidden, encoder_outputs):          
         # Ajoute une dimension pour traiter chaque élément de la séquence individuellement
@@ -124,12 +130,13 @@ class Decoder_RNNSearch(nn.Module):
         return prediction, hidden.squeeze(0)
 
 class Attention(nn.Module):
-    def __init__(self, enc_hidden_size, dec_hidden_size):
+    def __init__(self, enc_hidden_size, dec_hidden_size, device):
         super().__init__()      
 
         # Couches linéaires pour le calcul de l'attention
-        self.attn = nn.Linear((enc_hidden_size * 2) + dec_hidden_size, dec_hidden_size)
-        self.v = nn.Linear(dec_hidden_size, 1, bias = False)
+        self.attn = nn.Linear((enc_hidden_size * 2) + dec_hidden_size, dec_hidden_size).to(device)
+        self.v = nn.Linear(dec_hidden_size, 1, bias = False).to(device)
+        self.device = device
 
     def forward(self, hidden, encoder_outputs):
                 # Répétition du vecteur caché pour correspondre aux dimensions des sorties de l'encodeur
