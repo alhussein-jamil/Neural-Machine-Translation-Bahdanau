@@ -3,6 +3,22 @@ import torch
 import random
 # Définition de la classe Seq2Seq qui hérite de nn.Module
 class Seq2Seq(nn.Module):
+    """
+    Sequence-to-Sequence (Seq2Seq) model.
+
+    Args:
+        encoder (Encoder): The encoder module.
+        decoder (Decoder): The decoder module.
+        device (str): Device to which the model is moved (e.g., 'cuda' or 'cpu').
+
+    Attributes:
+        encoder (Encoder): The encoder module.
+        decoder (Decoder): The decoder module.
+        device (str): Device to which the model is moved.
+        
+    Methods:
+        forward(src, trg, teacher_forcing_ratio=0.5): Forward pass of the Seq2Seq model.
+    """
     def __init__(self, encoder, decoder, device):
         super().__init__()
         

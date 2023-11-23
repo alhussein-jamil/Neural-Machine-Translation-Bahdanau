@@ -4,6 +4,27 @@ import torch
 import torch.nn.functional as F
 
 class Encoder(nn.Module):
+    """
+    Encoder module for a Seq2Seq model.
+
+    Args:
+        input_size (int): The number of expected features in the input x.
+        emb_size (int): The size of the embedding for input tokens.
+        hidden_size (int): The number of features in the hidden state h.
+        num_layers (int): Number of recurrent layers.
+        device (str): Device to which the model is moved (e.g., 'cuda' or 'cpu').
+        dropout_proba (float): Probability of dropout.
+
+    Attributes:
+        hidden_size (int): Number of features in the hidden state.
+        embedding (nn.Embedding): Embedding layer for input tokens.
+        rnn (RNN): Recurrent layer.
+        dropout (nn.Dropout): Dropout layer.
+        device (str): Device to which the model is moved.
+
+    Methods:
+        forward(source): Forward pass of the Encoder.
+    """
     def __init__(self, input_size, emb_size, hidden_size, num_layers, device, dropout_proba):
         super().__init__()
 
@@ -19,6 +40,31 @@ class Encoder(nn.Module):
         return hidden
 
 class Decoder(nn.Module):
+    """
+    Decoder module for a Seq2Seq model.
+
+    Args:
+        output_size (int): The number of expected features in the output.
+        emb_size (int): The size of the embedding for output tokens.
+        hidden_size (int): The number of features in the hidden state h.
+        num_layers (int): Number of recurrent layers.
+        device (str): Device to which the model is moved (e.g., 'cuda' or 'cpu').
+        dropout_proba (float): Probability of dropout.
+
+    Attributes:
+        hidden_size (int): Number of features in the hidden state.
+        output_size (int): The number of expected features in the output.
+        embedding (nn.Embedding): Embedding layer for output tokens.
+        rnn (RNN): Recurrent layer.
+        fc_out (nn.Linear): Linear layer for output.
+        dropout (nn.Dropout): Dropout layer.
+        device (str): Device to which the model is moved.
+
+    Methods:
+        forward(input, hidden, context): Forward pass of the Decoder.
+    """
+
+
     def __init__(self, output_size, emb_size, hidden_size, num_layers, device, dropout_proba):
         super().__init__()
         # Définition des attributs
@@ -141,6 +187,23 @@ class Decoder_RNNSearch(nn.Module):
         return prediction, hidden.squeeze(0)
 
 class Attention(nn.Module):
+    """
+    Attention mechanism module.
+
+    Args:
+        enc_hidden_size (int): The number of features in the encoder's hidden state.
+        dec_hidden_size (int): The number of features in the decoder's hidden state.
+        device (str): Device to which the model is moved (e.g., 'cuda' or 'cpu').
+
+    Attributes:
+        attn (nn.Linear): Linear layer.
+        v (nn.Linear): Linear layer.
+        device (str): Device to which the model is moved.
+
+    Methods:
+        forward(hidden, encoder_outputs): Forward pass of the Attention.
+    """
+    
     def __init__(self, enc_hidden_size, dec_hidden_size, device):
         super().__init__()      
 
