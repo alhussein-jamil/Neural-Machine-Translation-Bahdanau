@@ -3,3 +3,5 @@ plots/
 *cpython*
 *__pycache__*
 data/t*
+*cache*
+*processed_data/*
