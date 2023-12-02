@@ -10,7 +10,7 @@ class TestRNN(unittest.TestCase):
         self.hidden_size = 20
         self.num_layers = 2
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.activation = 'tanh'
+        self.activation = nn.Tanh()
         self.dropout = 0.2
 
         # Create an instance of the RNN model
@@ -33,7 +33,7 @@ class TestRNN(unittest.TestCase):
         self.assertEqual(self.model.rnn.input_size, self.input_size)
         self.assertEqual(self.model.rnn.hidden_size, self.hidden_size)
         self.assertEqual(self.model.rnn.num_layers, self.num_layers)
-        self.assertEqual(self.model.rnn.nonlinearity, self.activation)
+        self.assertEqual(self.model.rnn.nonlinearity, "tanh" if self.activation is isinstance(self.activation, nn.Tanh) else "relu")
         self.assertTrue(self.model.rnn.batch_first)
         self.assertEqual(self.model.rnn.dropout, self.dropout)
 

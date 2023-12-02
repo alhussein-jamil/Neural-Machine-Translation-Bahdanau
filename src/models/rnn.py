@@ -26,7 +26,7 @@ class RNN(nn.Module):
     """
 
     def __init__(
-        self, input_size, hidden_size, num_layers, device, activation="tanh", dropout=0, bidirectional=False
+        self, input_size, hidden_size, num_layers, device, activation: nn.Module = nn.Tanh(), dropout=0, bidirectional=False
     ):
         """
         Initializes the RNN module.
@@ -45,11 +45,12 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.input_size = input_size
+
         self.rnn = nn.RNN(
             input_size,
             hidden_size,
             num_layers,
-            nonlinearity=activation,
+            nonlinearity="tanh" if activation is isinstance(activation, nn.Tanh) else "relu",
             batch_first=True,
             dropout=dropout,
             bidirectional=bidirectional,
@@ -67,7 +68,6 @@ class RNN(nn.Module):
         """
         # Initialize hidden state
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(self.device)
-
         # Forward propagate RNN
         out, hidden = self.rnn(x, h0)
 
