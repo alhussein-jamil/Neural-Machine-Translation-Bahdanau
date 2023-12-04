@@ -34,10 +34,11 @@ class Encoder(nn.Module):
         self.dropout = nn.Dropout(dropout_proba).to(device)
         self.device = device
         
-    def forward(self, source):               
-        embedded = self.dropout(self.embedding(source))
-        output, hidden = self.rnn(embedded)     
-        return hidden
+    def forward(self, source):   
+        embedded = self.dropout(self.embedding(source.long().to(self.device)))
+        #embedded = self.dropout(self.embedding(source))
+        output, hidden = self.rnn(embedded)  
+        return output, hidden
 
 class Decoder(nn.Module):
     """
