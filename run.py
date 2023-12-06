@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import argparse
 
 from src.data_preprocessing import load_data
@@ -61,7 +62,25 @@ if __name__ == "__main__":
             activation=torch.nn.ReLU(),
             last_layer_activation=torch.nn.Sigmoid(),
             dropout=0.2,
-<<<<<<< HEAD
     )
-=======
+    config_decoder = dict(alignment=alignment_cfg, rnn=config_rnn_decoder)
+
+
+    config_encoder = dict(
+        rnn_hidden_size = args.enc_out_size,
+        rnn_num_layers = 1,
+        rnn_device = device,
+        vocab_size=len(bow_en) + 1,
+        rnn_type="GRU"
+        )
+    
+    training_cfg = dict(
+        device = device,
+        output_vocab_size = len(bow_fr) + 1,
     )
+
+    translator_cfg = dict(encoder=config_encoder, decoder=config_decoder, training=training_cfg)
+
+    model = AlignAndTranslate(**translator_cfg)
+
+    model.train(train_loader=train_dataloader, val_loader=val_dataloader)
