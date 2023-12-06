@@ -100,14 +100,41 @@ class Encoder(nn.Module):
         #Appliquer le one-hot coding
         v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size)
 
+        # Initialize the hidden state
+        num_directions = 2 if self.rnn.rnn.bidirectional else 1
+        h0 = torch.zeros(self.rnn.num_layers * num_directions, k, self.rnn.hidden_size).to(self.rnn.device)
+
+
         # Appeler la classe RNN pour obtenir output et hidden
         rnn_output, rnn_hidden = self.rnn(v_one_hot)
 
         return rnn_output, rnn_hidden
         
-        
+'''      
 en = Encoder(vocab_size=5)
 print(en(torch.tensor([
     (4,2,1),
     (2,1,0)
-])))
+])))'''
+
+en = Encoder(
+    rnn_hidden_size=16,
+    rnn_num_layers=1,
+    rnn_device='cpu',  # Vous pouvez spécifier le périphérique approprié ici
+    vocab_size=5
+)
+
+# Définir une séquence d'entrée (utiliser des listes au lieu de tuples)
+sequence_input = torch.tensor([
+    [4, 2, 1],
+    [2, 1, 0]
+])
+
+# Appeler l'encodeur pour obtenir le vecteur c
+encoded_output, encoded_hidden = en(sequence_input)
+
+# Afficher la sortie encodée et l'état caché
+print("Encoded Output:")
+print(encoded_output)
+print("Encoded Hidden State:")
+print(encoded_hidden)
