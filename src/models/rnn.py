@@ -73,7 +73,6 @@ class RNN(nn.Module):
 
         return out, hidden
 
-
 class Encoder(nn.Module):
     def __init__(self, rnn_hidden_size,rnn_num_layers,rnn_device, vocab_size = 5):
         super().__init__()
@@ -117,6 +116,7 @@ print(en(torch.tensor([
     (2,1,0)
 ])))'''
 
+<<<<<<< Updated upstream
 en = Encoder(
     rnn_hidden_size=16,
     rnn_num_layers=1,
@@ -138,3 +138,42 @@ print("Encoded Output:")
 print(encoded_output)
 print("Encoded Hidden State:")
 print(encoded_hidden)
+=======
+en(torch.rand(3,5))
+
+>>>>>>> Stashed changes
+
+
+class Encoder(nn.Module):
+    def __init__(self,device, vocab_size = 5 ,hidden_size= 64, num_layers= 64 , dropout=0, bidirectional= True):
+
+        super().__init__()
+
+        self.vocab_size = vocab_size
+        self.hidden_size=hidden_size,
+        self.num_layers=num_layers,
+        self.device=device,
+        self.dropout= dropout.to(device)
+        self.rnn = RNN( hidden_size, num_layers, device, dropout) 
+
+    def forward(self, x):
+        k, t_x = x.shape
+
+
+        v = torch.zeros(k, t_x, self.vocab_size)
+
+        #Appliquer le one-hot coding
+        v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size)
+
+        # Appeler la classe RNN pour obtenir output et hidden
+         
+
+        rnn_output, rnn_hidden = self.rnn(v_one_hot)
+
+        return rnn_output, rnn_hidden
+        
+en = Encoder(vocab_size=5)
+print(en(torch.tensor([
+    (4,2,1),
+    (2,1,0)
+])))
