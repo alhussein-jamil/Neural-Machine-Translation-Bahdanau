@@ -1,19 +1,17 @@
-import torch.nn as nn
-from models.rnn import RNN
-from models.fcnn import FCNN
+from typing import Any, Dict, List
+
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from typing import List, Dict, Any
+
+from models.fcnn import FCNN
+from models.rnn import RNN
+
 
 class Alignment(nn.Module):
-    def __init__(
-        self,
-        **kwargs
-    ):
+    def __init__(self, **kwargs):
         super().__init__()
-        self.nn = FCNN(
-            **kwargs
-        )
+        self.nn = FCNN(**kwargs)
 
     def forward(self, s: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
         """
@@ -30,6 +28,7 @@ class Alignment(nn.Module):
         a = self.nn(torch.cat((s, h), dim=1))
 
         return a
+
 
 class Decoder(nn.Module):
     def __init__(self, config: Dict[str, Any]):
@@ -62,8 +61,10 @@ class Decoder(nn.Module):
         for i in range(h.size(1)):
             a = self.alignment(s.squeeze(0), h[:, i, :])
             e = F.softmax(a, dim=1)
-            c = (h.swapaxes(1, 2) @ e.unsqueeze(2)).squeeze(2)  # c is of shape (batch_size, hidden_size)
+            c = (h.swapaxes(1, 2) @ e.unsqueeze(2)).squeeze(
+                2
+            )  # c is of shape (batch_size, hidden_size)
             y, s = self.birnn(c.unsqueeze(1), s)
             output[:, i, :] = y.squeeze(1)
-            
+
         return F.softmax(output, dim=2)

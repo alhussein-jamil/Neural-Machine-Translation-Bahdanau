@@ -1,7 +1,10 @@
 import unittest
+
 import torch
 from torch import nn
+
 from models.fcnn import FCNN
+
 
 class TestFCNN(unittest.TestCase):
     def setUp(self):
@@ -9,13 +12,21 @@ class TestFCNN(unittest.TestCase):
         self.input_size = 10
         self.hidden_sizes = [20, 30]
         self.output_size = 5
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.activation = nn.ReLU()
         self.last_layer_activation = nn.Sigmoid()
         self.dropout = 0.2
 
         # Create an instance of the FCNN model
-        self.model = FCNN(self.input_size, self.hidden_sizes, self.output_size, self.device, self.activation, self.last_layer_activation, self.dropout)
+        self.model = FCNN(
+            self.input_size,
+            self.hidden_sizes,
+            self.output_size,
+            self.device,
+            self.activation,
+            self.last_layer_activation,
+            self.dropout,
+        )
 
     def test_model_initialization(self):
         # Check if the model is an instance of nn.Module
@@ -45,5 +56,6 @@ class TestFCNN(unittest.TestCase):
         for param in self.model.parameters():
             assert self.device in str(param.device)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,9 +1,14 @@
 import argparse
 
 from src.data_preprocessing import load_data
+<<<<<<< HEAD
 # from models.translation_models import AlignAndTranslate
 import torch
 from src.translation_model import AlignAndTranslate
+=======
+from models.translation_models import AlignAndTranslate
+import torch
+>>>>>>> ea636e9 (Refactor code and update dependencies)
 
 parser = argparse.ArgumentParser()
 
@@ -45,4 +50,8 @@ if __name__ == "__main__":
             activation=torch.nn.ReLU(),
             last_layer_activation=torch.nn.Sigmoid(),
             dropout=0.2,
+<<<<<<< HEAD
     )
+=======
+    )
+>>>>>>> ea636e9 (Refactor code and update dependencies)
