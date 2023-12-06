@@ -5,110 +5,103 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 
 
-eng_tensor = []
-fr_tensor = []
 
-# Concatenate tensors to create a single tensor
-concat_tensor = torch.cat((eng_tensor, fr_tensor), dim=1)
-
-# Split the concatenated tensor into training and test sets
-train_size = int(0.8 * len(concat_tensor))  
-test_size = len(concat_tensor) - train_size
-train_dataset, test_dataset = torch.utils.data.random_split(concat_tensor, [train_size, test_size])
-
-# Create DataLoaders
-batch_size = 64 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
 class AlignAndTranslate(nn.Module):
-    def __init__(self, encoder_params, decoder_params):
+    def __init__(self, encoder_params, decoder_params, optimizer_params=None, criterion=None):
         super(AlignAndTranslate, self).__init__()
-        self.encoder = Encoder(encoder_params)
-        self.decoder = Decoder(decoder_params)
+        self.encoder = Encoder(**encoder_params)
+        self.decoder = Decoder(**decoder_params)
+        
+        # Initialize optimizer and criterion
+        if optimizer_params is not None:
+            self.optimizer = optim.SGD(self.parameters(), **optimizer_params)
+        else:
+            self.optimizer = None
+        if criterion is not None :
+            self.criterion =  nn.CrossEntropyLoss() 
+        else :
+            self.criterion = None
 
     def forward(self, x):
         encoder_output, encoder_hidden = self.encoder(x)
         decoder_output = self.decoder(encoder_output)
         return decoder_output
 
-    def train_step(self, input_tensor, target_tensor, optimizer, criterion):
+    def train_step(self, input_data, target_data):
+        optimizer = self.optimizer
+        criterion = self.criterion
+
+        if optimizer is None or criterion is None:
+            raise ValueError("Optimizer and criterion must be provided for training.")
+
         optimizer.zero_grad()
 
-        # Encoder
-        encoder_outputs, encoder_hidden = self.encoder(input_tensor)
-
-        # Initialize decoder input with SOS_token
-        decoder_input = torch.tensor([['startofsequencetoken']])  
-        decoder_hidden = encoder_hidden
-
-        # Initialize loss
-        loss = 0
-
-        # Teacher forcing: Feed the target as the next input
-        for di in range(target_tensor.size(0)):
-            decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
-            
-            # Convert probabilities to indices
-            topv, topi = decoder_output.topk(1)
-            decoder_input = topi.squeeze().detach()  # detach from history as input
-
-            loss += criterion(decoder_output, target_tensor[di])
-
-            if decoder_input.item() == 'end of sequence indice':  
-                break
-
+        # Pass through the model
+        output = self(input_data)
+        # Compute the loss
+        loss = criterion(output, target_data)
         loss.backward()
+        # Optimization step
         optimizer.step()
 
         return loss.item()
 
     def train(self, train_loader, n_epochs):
-        optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)  
-        criterion = nn.CrossEntropyLoss() 
+        if self.optimizer is None or self.criterion is None:
+            raise ValueError("Optimizer and criterion must be provided for training.")
 
         for epoch in range(n_epochs):
             total_loss = 0
 
+            # Training
+            self.train()
             for batch in train_loader:
-                input_data, target_data = batch[:, :eng_tensor.size(1)], batch[:, eng_tensor.size(1):]
-                loss = self.train_step(input_data, target_data, optimizer, criterion)
+                input_data, target_data = batch["english"]["idx"], batch["french"]["idx"]
+                loss = self.train_step(input_data, target_data)
                 total_loss += loss
 
             average_loss = total_loss / len(train_loader)
-            print(f'Epoch {epoch + 1}/{n_epochs}, Loss: {average_loss}')
+            print(f'Training - Epoch {epoch + 1}/{n_epochs}, Loss: {average_loss}')
+            '''
+            # Validation
+            self.eval()
+            with torch.no_grad():
+                val_loss = 0
+                for batch in test_loader:
+                    input_data, target_data = batch["english"]["idx"], batch["french"]["idx"]
+                    output = self(input_data)
+                    val_loss += self.criterion(output, target_data).item()
 
-    def predict(self, test_loader, max_length=max_length):
-        self.eval()  # Set the model to evaluation mode
+                average_val_loss = val_loss / len(test_loader)
+                print(f'Validation - Epoch {epoch + 1}/{n_epochs}, Loss: {average_val_loss}')
+            '''
+    def predict(self, test_loader):
+        self.eval()  # Mettre le modèle en mode évaluation
         predictions = []
 
         with torch.no_grad():
             for batch in test_loader:
-                input_data, _ = batch
-                encoder_outputs, encoder_hidden = self.encoder(input_data)
+                input_data, _ = batch["english"]["idx"], batch["english"]["idx"]
+                output = self(input_data)
 
-                # Initialize decoder input with SOS_token
-                decoder_input = torch.tensor([['startofsequencetoken']]) 
-                decoder_hidden = encoder_hidden
-                decoded_words = []
+                # Convertir les probabilités en indices
+                _, topi = output.topk(1)
+                predictions.append(topi.squeeze().detach())  # Détacher sans convertir en numpy array
 
-                # Generate translation one word at a time
-                for di in range(max_length):
-                    decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
-                    
-                    # Convert probabilities to indices
-                    topv, topi = decoder_output.topk(1)
-                    decoder_input = topi.squeeze().detach()  # detach from history as input
+            # Validation
+            val_loss = 0
+            for batch in test_loader:
+                input_data, target_data = batch["english"]["idx"], batch["english"]["idx"]
+                output = self(input_data)
+                val_loss += self.criterion(output, target_data).item()
 
-                    if decoder_input.item() == 'end of sequence indice':  
-                        break
-                    else:
-                        decoded_words.append(decoder_input.item())
+            average_val_loss = val_loss / len(test_loader)
+            print(f'Validation Loss: {average_val_loss}')
 
-                predictions.append(decoded_words)
+        # Concaténer les prédictions pour obtenir un tenseur
+        predictions_tensor = torch.cat(predictions, dim=1)
 
-        return predictions
-
-
+        return predictions_tensor
 
