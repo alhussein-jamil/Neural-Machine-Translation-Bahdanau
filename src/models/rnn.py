@@ -77,41 +77,7 @@ class RNN(nn.Module):
         return out, hidden
 
 
-# class Encoder(nn.Module):
-#     def __init__(self, rnn_hidden_size,rnn_num_layers,rnn_device, vocab_size = 5):
-#         super().__init__()
-#         self.vocab_size = vocab_size
-#         #Utiliser la classe RNN dans Encoder
-#         self.rnn = RNN(
-#              input_size=vocab_size,
-#              hidden_size=rnn_hidden_size,
-#              num_layers=rnn_num_layers,
-#              device=rnn_device,
-#              activation=nn.Tanh(),
-#              dropout=0,
-#             bidirectional=True
-#          ) 
-    
-#     # def vect_to_onehot: 
 
-#     def forward(self, x):
-#         k, t_x = x.shape
-
-
-#         v = torch.zeros(k, t_x, self.vocab_size)
-
-#         #Appliquer le one-hot coding
-#         v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size)
-
-#         # Initialize the hidden state
-#         num_directions = 2 if self.rnn.rnn.bidirectional else 1
-#         h0 = torch.zeros(self.rnn.num_layers * num_directions, k, self.rnn.hidden_size).to(self.rnn.device)
-
-
-#         # Appeler la classe RNN pour obtenir output et hidden
-#         rnn_output, rnn_hidden = self.rnn(v_one_hot)
-
-#         return rnn_output, rnn_hidden
         
 # '''      
 # en = Encoder(vocab_size=5)

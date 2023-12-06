@@ -24,6 +24,7 @@ class TestDecoder(unittest.TestCase):
             device="cpu",
             dropout=0,
             type = "GRU",
+            bidirectional=False
         )
         self.config = dict(
             alignment=config_alignment,

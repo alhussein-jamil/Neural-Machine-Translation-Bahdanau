@@ -8,17 +8,11 @@ from typing import List, Dict, Any
 class Alignment(nn.Module):
     def __init__(
         self,
-        input_size: int,
-        hidden_sizes: List[int],
-        output_size: int,
-        device: str,
-        activation: nn.Module = nn.Tanh(),
-        last_layer_activation: nn.Module = nn.Identity(),
-        dropout: float = 0
+        **kwargs
     ):
         super().__init__()
         self.nn = FCNN(
-            input_size, hidden_sizes, output_size, device, activation, last_layer_activation, dropout
+            **kwargs
         )
 
     def forward(self, s: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
@@ -58,15 +52,18 @@ class Decoder(nn.Module):
         # first, we need to find the context vector c
         # we do this by finding the alignment vector a
         output = torch.zeros(h.size(0), h.size(1), self.birnn.hidden_size).to(h.device)
+
         s = torch.zeros(
             self.birnn.num_layers * 1 if not self.birnn.rnn.bidirectional else 2,
             h.size(0),
             self.birnn.hidden_size,
         ).to(h.device)
+
         for i in range(h.size(1)):
             a = self.alignment(s.squeeze(0), h[:, i, :])
             e = F.softmax(a, dim=1)
             c = (h.swapaxes(1, 2) @ e.unsqueeze(2)).squeeze(2)  # c is of shape (batch_size, hidden_size)
             y, s = self.birnn(c.unsqueeze(1), s)
             output[:, i, :] = y.squeeze(1)
-        return output
+            
+        return F.softmax(output, dim=2)
