@@ -56,7 +56,7 @@ class RNN(nn.Module):
             bidirectional=bidirectional,
         ).to(self.device)
 
-    def forward(self, x):
+    def forward(self, x, h0 = None):
         """
         Forward pass of the RNN.
 
@@ -67,10 +67,13 @@ class RNN(nn.Module):
             torch.Tensor: Output tensor.
         """
         # Initialize hidden state
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(self.device)
-        # Forward propagate RNN
-        out, hidden = self.rnn(x, h0)
+        if h0 is None:
+            h0 = torch.zeros( x.size(0), self.num_layers * 1 if not self.rnn.bidirectional else 2, self.hidden_size).to(
+                self.device
+            )
 
+        #Forward propagate RNN
+        out, hidden = self.rnn(x,h0)
         return out, hidden
 
 
@@ -167,5 +170,6 @@ class Decoder(nn.Module):
         output = self.fc(output)
 
         return output, hidden
+
 
 
