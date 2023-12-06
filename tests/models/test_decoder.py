@@ -8,7 +8,7 @@ class TestDecoder(unittest.TestCase):
         self.encoder_out_size = 10
         self.decoder_out_size = 12
         self.seqlen = 5
-        config_allignment = dict(
+        config_alignment = dict(
             input_size=self.encoder_out_size + self.decoder_out_size,
             hidden_sizes=[10, 10],
             output_size=self.seqlen,
@@ -23,9 +23,10 @@ class TestDecoder(unittest.TestCase):
             num_layers=1,
             device="cpu",
             dropout=0,
+            type = "GRU",
         )
         self.config = dict(
-            allignment=config_allignment,
+            alignment=config_alignment,
             birnn=config_birnn
         )
         return super().setUp()

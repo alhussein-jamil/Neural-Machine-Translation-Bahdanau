@@ -12,9 +12,9 @@ class TestRNN(unittest.TestCase):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.activation = nn.Tanh()
         self.dropout = 0.2
-
+        self.type = "GRU"
         # Create an instance of the RNN model
-        self.model = RNN(self.input_size, self.hidden_size, self.num_layers, self.device, self.activation, self.dropout)
+        self.model = RNN(self.input_size, self.hidden_size, self.num_layers, self.device, self.activation, self.dropout,type=self.type)
 
     def test_model_initialization(self):
         # Check if the model is an instance of nn.Module
@@ -29,11 +29,11 @@ class TestRNN(unittest.TestCase):
         self.assertEqual(self.model.device, self.device)
 
         # Check if the RNN layer is created with the correct parameters
-        self.assertIsInstance(self.model.rnn, nn.RNN)
+        self.assertIsInstance(self.model.rnn, nn.RNN if self.type == "RNN" else nn.LSTM if self.type == "LSTM" else nn.GRU)
         self.assertEqual(self.model.rnn.input_size, self.input_size)
         self.assertEqual(self.model.rnn.hidden_size, self.hidden_size)
         self.assertEqual(self.model.rnn.num_layers, self.num_layers)
-        self.assertEqual(self.model.rnn.nonlinearity, "tanh" if self.activation is isinstance(self.activation, nn.Tanh) else "relu")
+        # self.assertEqual(self.model.rnn.nonlinearity, "tanh" if self.activation is isinstance(self.activation, nn.Tanh) else "relu")
         self.assertTrue(self.model.rnn.batch_first)
         self.assertEqual(self.model.rnn.dropout, self.dropout)
 
