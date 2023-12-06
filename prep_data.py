@@ -49,7 +49,24 @@ class toIdTransform:
                 "ids_fr": [self.word_to_id_fr.get(token, len(self.most_frequent_words_fr)-1) for token in tokenized["tokenized_fr"]]}
     
 
+import torch
+from torch.utils.data import Dataset
 
+class TranslationDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+        self.languages = ['english', 'french']
+        self.types = ['idx', 'sentences']
+    def __len__(self):
+        return len(self.data['english']['idx'])  # Assuming all language and data types have the same length
+
+    def __getitem__(self, index):
+        sample = {}
+        for language in self.languages:
+            sample[language] = {}
+            for type in self.types:
+                sample[language][type] = self.data[language][type][index]
+        return sample
 class to_tensor:
     """
     Transform class to convert word IDs to PyTorch tensors.
@@ -190,6 +207,9 @@ def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30):
             french=np.array(tokenized_most_frequent_french_words)
         )
     )
-    
-    return data
+    train_dataset = TranslationDataset(data['train'])
+    val_dataset = TranslationDataset(data['val'])
 
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=64, shuffle=True)
+    return (data["train"], train_dataloader), (data["val"], val_dataloader), (data["bow"]["english"], data["bow"]["french"])
