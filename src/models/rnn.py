@@ -73,6 +73,7 @@ class RNN(nn.Module):
 
         return out, hidden
 
+
 class Encoder(nn.Module):
     def __init__(self, rnn_hidden_size,rnn_num_layers,rnn_device, vocab_size = 5):
         super().__init__()
@@ -108,6 +109,35 @@ class Encoder(nn.Module):
         rnn_output, rnn_hidden = self.rnn(v_one_hot)
 
         return rnn_output, rnn_hidden
+        
+'''      
+en = Encoder(vocab_size=5)
+print(en(torch.tensor([
+    (4,2,1),
+    (2,1,0)
+])))'''
+
+en = Encoder(
+    rnn_hidden_size=16,
+    rnn_num_layers=1,
+    rnn_device='cpu',  # Vous pouvez spécifier le périphérique approprié ici
+    vocab_size=5
+)
+
+# Définir une séquence d'entrée (utiliser des listes au lieu de tuples)
+sequence_input = torch.tensor([
+    [4, 2, 1],
+    [2, 1, 0]
+])
+
+# Appeler l'encodeur pour obtenir le vecteur c
+encoded_output, encoded_hidden = en(sequence_input)
+
+# Afficher la sortie encodée et l'état caché
+print("Encoded Output:")
+print(encoded_output)
+print("Encoded Hidden State:")
+print(encoded_hidden)
         
 
 class Decoder(nn.Module):
