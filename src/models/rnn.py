@@ -75,19 +75,19 @@ class RNN(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, vocab_size = 5):
+    def __init__(self, rnn_hidden_size,rnn_num_layers,rnn_device, vocab_size = 5):
         super().__init__()
         self.vocab_size = vocab_size
-        # Utiliser la classe RNN dans Encoder
-        # self.rnn = RNN(
-        #     input_size=vocab_size,
-        #     hidden_size=rnn_hidden_size,
-        #     num_layers=rnn_num_layers,
-        #     device=rnn_device,
-        #     activation=nn.Tanh(),
-        #     dropout=0,
-        #     bidirectional=False
-        # ) 
+        #Utiliser la classe RNN dans Encoder
+        self.rnn = RNN(
+             input_size=vocab_size,
+             hidden_size=rnn_hidden_size,
+             num_layers=rnn_num_layers,
+             device=rnn_device,
+             activation=nn.Tanh(),
+             dropout=0,
+            bidirectional=True
+         ) 
     
     # def vect_to_onehot: 
 
@@ -101,10 +101,10 @@ class Encoder(nn.Module):
         v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size)
 
         # Appeler la classe RNN pour obtenir output et hidden
-        # rnn_output, rnn_hidden = self.rnn(v_one_hot)
+        rnn_output, rnn_hidden = self.rnn(v_one_hot)
 
-        # return rnn_output, rnn_hidden
-        return v_one_hot
+        return rnn_output, rnn_hidden
+        
         
 en = Encoder(vocab_size=5)
 print(en(torch.tensor([
