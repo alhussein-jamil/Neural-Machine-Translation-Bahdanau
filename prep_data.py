@@ -4,7 +4,7 @@ import os
 from datasets import load_dataset, load_from_disk
 import torch 
 from sacremoses import MosesTokenizer, MosesDetokenizer
-
+from torch.utils.data import Dataset
 class TokenizerWrapper:
     """
     Wrapper class for tokenization using MosesTokenizer for English and French.
@@ -49,8 +49,6 @@ class toIdTransform:
                 "ids_fr": [self.word_to_id_fr.get(token, len(self.most_frequent_words_fr)-1) for token in tokenized["tokenized_fr"]]}
     
 
-import torch
-from torch.utils.data import Dataset
 
 class TranslationDataset(Dataset):
     def __init__(self, data):
