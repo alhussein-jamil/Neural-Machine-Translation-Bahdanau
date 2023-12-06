@@ -30,6 +30,7 @@ class Encoder(nn.Module):
 
         self.hidden_size = hidden_size      
         self.embedding = nn.Embedding(input_size, emb_size).to(device) 
+        #input_size= emb_size
         self.rnn = RNN(emb_size, hidden_size, num_layers, device, dropout= dropout_proba)  
         self.dropout = nn.Dropout(dropout_proba).to(device)
         self.device = device
