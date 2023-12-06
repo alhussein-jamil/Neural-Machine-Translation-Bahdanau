@@ -1,6 +1,7 @@
-from torch import nn
 import torch
-import torch.nn.functional as F 
+import torch.nn.functional as F
+from torch import nn
+
 
 class RNN(nn.Module):
     """
@@ -26,7 +27,15 @@ class RNN(nn.Module):
     """
 
     def __init__(
-        self, input_size, hidden_size, num_layers, device, activation: nn.Module = nn.Tanh(), dropout=0, bidirectional=False, type = 'RNN'
+        self,
+        input_size,
+        hidden_size,
+        num_layers,
+        device,
+        activation: nn.Module = nn.Tanh(),
+        dropout=0,
+        bidirectional=False,
+        type="RNN",
     ):
         """
         Initializes the RNN module.
@@ -45,7 +54,9 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.input_size = input_size
-        network_type = nn.RNN if type == 'RNN' else nn.LSTM if type == 'LSTM' else nn.GRU
+        network_type = (
+            nn.RNN if type == "RNN" else nn.LSTM if type == "LSTM" else nn.GRU
+        )
         self.rnn = network_type(
             input_size,
             hidden_size,
@@ -56,7 +67,7 @@ class RNN(nn.Module):
             bidirectional=bidirectional,
         ).to(self.device)
 
-    def forward(self, x, h0 = None):
+    def forward(self, x, h0=None):
         """
         Forward pass of the RNN.
 
@@ -68,74 +79,12 @@ class RNN(nn.Module):
         """
         # Initialize hidden state
         if h0 is None:
-            h0 = torch.zeros( self.num_layers * 1 if not self.rnn.bidirectional else 2, x.size(0), self.hidden_size).to(
-                self.device
-            )
+            h0 = torch.zeros(
+                self.num_layers * 1 if not self.rnn.bidirectional else 2,
+                x.size(0),
+                self.hidden_size,
+            ).to(self.device)
 
-        #Forward propagate RNN
-        out, hidden = self.rnn(x,h0)
+        # Forward propagate RNN
+        out, hidden = self.rnn(x, h0)
         return out, hidden
-
-
-
-        
-# '''      
-# en = Encoder(vocab_size=5)
-# print(en(torch.tensor([
-#     (4,2,1),
-#     (2,1,0)
-# ])))'''
-
-# en = Encoder(
-#     rnn_hidden_size=16,
-#     rnn_num_layers=1,
-#     rnn_device='cpu',  # Vous pouvez spécifier le périphérique approprié ici
-#     vocab_size=5
-# )
-
-# # Définir une séquence d'entrée (utiliser des listes au lieu de tuples)
-# sequence_input = torch.tensor([
-#     [4, 2, 1],
-#     [2, 1, 0]
-# ])
-
-# # Appeler l'encodeur pour obtenir le vecteur c
-# encoded_output, encoded_hidden = en(sequence_input)
-
-# # Afficher la sortie encodée et l'état caché
-# print("Encoded Output:")
-# print(encoded_output)
-# print("Encoded Hidden State:")
-# print(encoded_hidden)
-        
-
-# class Decoder(nn.Module):
-#     def __init__(self, vocab_size=5, hidden_size=64, num_layers=1, device='cpu', dropout=0.0):
-#         super(Decoder, self).__init__()
-
-#         self.vocab_size = vocab_size
-#         self.hidden_size = hidden_size
-#         self.num_layers = num_layers
-#         self.device = device
-
-#         self.rnn = nn.RNN(
-#             input_size=vocab_size,
-#             hidden_size=hidden_size,
-#             num_layers=num_layers,
-#             batch_first=True,
-#             dropout=dropout,
-#         ).to(device)
-
-#         self.fc = nn.Linear(hidden_size, vocab_size).to(device)
-
-#     def forward(self, x, hidden):
-#         # x est la sortie du décodeur précédent (ou le mot cible au premier pas de temps)
-#         # hidden l'état caché de l'encodeur au premier pas de temps)
-
-#         output, hidden = self.rnn(x, hidden)
-#         output = self.fc(output)
-
-#         return output, hidden
-
-
-

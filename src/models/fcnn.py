@@ -1,9 +1,20 @@
-import torch 
+from typing import Any, Dict, List, Tuple
+
+import torch
 from torch import nn
-from typing import List, Tuple, Dict, Any
+
 
 class FCNN(nn.Module):
-    def __init__(self, input_size: int, hidden_sizes: List[int], output_size: int, device: str, activation: nn.Module = nn.Tanh(), last_layer_activation: nn.Module = nn.Identity(), dropout: float = 0):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_sizes: List[int],
+        output_size: int,
+        device: str,
+        activation: nn.Module = nn.Tanh(),
+        last_layer_activation: nn.Module = nn.Identity(),
+        dropout: float = 0,
+    ):
         super(FCNN, self).__init__()
 
         self.device = device
@@ -56,6 +67,6 @@ class FCNN(nn.Module):
 
         # Apply the final fully-connected layer
         x = self.fc[-1](x)
-        x = self.last_layer_activation(x)    
+        x = self.last_layer_activation(x)
 
         return x

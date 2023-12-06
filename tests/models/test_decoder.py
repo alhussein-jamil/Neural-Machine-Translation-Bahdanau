@@ -1,10 +1,13 @@
-from models.decoder import Decoder
 import unittest
+
 import torch
+
+from models.decoder import Decoder
+
 
 class TestDecoder(unittest.TestCase):
     def setUp(self) -> None:
-        self.sample_entry = torch.rand(3, 5, 10) #batch_size, Tx, hidden_size
+        self.sample_entry = torch.rand(3, 5, 10)  # batch_size, Tx, hidden_size
         self.encoder_out_size = 10
         self.decoder_out_size = 12
         self.seqlen = 5
@@ -15,7 +18,7 @@ class TestDecoder(unittest.TestCase):
             device="cpu",
             activation=torch.nn.ReLU(),
             last_layer_activation=torch.nn.Sigmoid(),
-            dropout=0.2
+            dropout=0.2,
         )
         config_birnn = dict(
             input_size=self.encoder_out_size,
@@ -23,14 +26,12 @@ class TestDecoder(unittest.TestCase):
             num_layers=1,
             device="cpu",
             dropout=0,
-            type = "GRU",
-            bidirectional=False
+            type="GRU",
+            bidirectional=False,
         )
-        self.config = dict(
-            alignment=config_alignment,
-            birnn=config_birnn
-        )
+        self.config = dict(alignment=config_alignment, birnn=config_birnn)
         return super().setUp()
+
     def test_initalization(self):
         decoder = Decoder(self.config)
         self.assertIsInstance(decoder, torch.nn.Module)
@@ -41,5 +42,5 @@ class TestDecoder(unittest.TestCase):
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

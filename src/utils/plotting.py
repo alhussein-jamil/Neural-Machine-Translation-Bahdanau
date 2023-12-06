@@ -1,10 +1,13 @@
-from typing import Dict, Any, Tuple, List
 import os
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 from matplotlib import pyplot as plt
 
 
-def plot_alignment(data: Dict[str, Tuple[List[str], List[str], np.ndarray]], save_path: str = None) -> None:
+def plot_alignment(
+    data: Dict[str, Tuple[List[str], List[str], np.ndarray]], save_path: str = None
+) -> None:
     """
     Plot alignment for each pair of phrases.
 
@@ -23,7 +26,7 @@ def plot_alignment(data: Dict[str, Tuple[List[str], List[str], np.ndarray]], sav
 
     # Set the figure size based on the number of subplots
     fig_size = (10, h * 5)
-    
+
     # Create subplots
     _, axes = plt.subplots(h, w, figsize=fig_size)
     axes = axes.reshape(h, w)
@@ -36,7 +39,7 @@ def plot_alignment(data: Dict[str, Tuple[List[str], List[str], np.ndarray]], sav
         ax = axes[i // 2, i % 2]
 
         # Plot the alignment matrix
-        ax.imshow(alignment, cmap='gray')
+        ax.imshow(alignment, cmap="gray")
 
         # Set ticks and labels
         ax.set_xticks(np.arange(len(phrase1)))
@@ -71,14 +74,14 @@ def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
     Returns:
     - None
     """
-    plotting_styles = ['-', '--', '-.', ':']
+    plotting_styles = ["-", "--", "-.", ":"]
 
     for i, (key, values) in enumerate(data.items()):
-        plt.plot(values, plotting_styles[i % len(plotting_styles)], label=key) 
+        plt.plot(values, plotting_styles[i % len(plotting_styles)], label=key)
 
-    plt.xlabel('Sentence Length')
-    plt.ylabel('BLEU score')
-    plt.legend(loc='lower left')
+    plt.xlabel("Sentence Length")
+    plt.ylabel("BLEU score")
+    plt.legend(loc="lower left")
 
     # Save or display the plot
     if save_path:
@@ -89,7 +92,8 @@ def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
     else:
         plt.show()
 
-def print_table(x : List[str], y: List[str], data:np.ndarray):
+
+def print_table(x: List[str], y: List[str], data: np.ndarray):
     """
     Print a table with the alignment between two phrases in a markdown format.
 
@@ -116,7 +120,7 @@ def print_table(x : List[str], y: List[str], data:np.ndarray):
     # Print the table body
     for i, word in enumerate(y):
         print(f"| {word} |", end="")
-        for j in range(len(x)-1):
+        for j in range(len(x) - 1):
             print(f" {data[i, j]:.2f} |", end="")
         print()
 
@@ -125,4 +129,3 @@ def print_table(x : List[str], y: List[str], data:np.ndarray):
     for _ in x:
         print("-|-" if _ != x[-1] else "-|", end="")
     print()
-    
