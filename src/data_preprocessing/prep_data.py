@@ -6,9 +6,13 @@ import torch
 from datasets import load_dataset, load_from_disk
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch.utils.data import Dataset
+<<<<<<< HEAD
 from multiprocessing import cpu_count
 
 n_processors = cpu_count()
+=======
+
+>>>>>>> ecdb713 (Refactor code and update dependencies)
 
 class TokenizerWrapper:
     """
@@ -102,6 +106,10 @@ class to_tensor:
             "ids_en": self.tor.tensor(ids["ids_en"]),
             "ids_fr": self.tor.tensor(ids["ids_fr"]),
         }
+<<<<<<< HEAD
+=======
+
+>>>>>>> ecdb713 (Refactor code and update dependencies)
 
 
 def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=32):
@@ -141,7 +149,11 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
         tokenized_train_data = train_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
+<<<<<<< HEAD
             num_proc=n_processors,
+=======
+            num_proc=19,
+>>>>>>> ecdb713 (Refactor code and update dependencies)
             remove_columns=["translation"],
         )
         tokenized_train_data.save_to_disk(
@@ -153,7 +165,11 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
         tokenized_val_data = val_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
+<<<<<<< HEAD
             num_proc=n_processors,
+=======
+            num_proc=19,
+>>>>>>> ecdb713 (Refactor code and update dependencies)
             remove_columns=["translation"],
         )
         tokenized_val_data.save_to_disk(
@@ -172,10 +188,17 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
     most_frequent_french_words = bow_french["word"].apply(lambda x: str(x)).tolist()
     tokenized_most_frequent_english_words = mt_en.tokenize(
         " ".join(most_frequent_english_words)
+<<<<<<< HEAD
     )[: kx - 1]
     tokenized_most_frequent_french_words = mt_fr.tokenize(
         " ".join(most_frequent_french_words)
     )[: ky - 1]
+=======
+    )[: n - 1]
+    tokenized_most_frequent_french_words = mt_fr.tokenize(
+        " ".join(most_frequent_french_words)
+    )[: m - 1]
+>>>>>>> ecdb713 (Refactor code and update dependencies)
     tokenized_most_frequent_english_words.append("<unk>")
     tokenized_most_frequent_french_words.append("<unk>")
 
@@ -188,7 +211,11 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
     # Convert tokenized sentences to word IDs and save train data if not already done
     if not os.path.exists("processed_data/id_train_data{}".format(train_len)):
         tokenized_train_data = tokenized_train_data.map(
+<<<<<<< HEAD
             to_id_transform, batched=False, num_proc=n_processors
+=======
+            to_id_transform, batched=False, num_proc=19
+>>>>>>> ecdb713 (Refactor code and update dependencies)
         )
         tokenized_train_data.save_to_disk(
             "processed_data/id_train_data{}".format(train_len)
@@ -197,7 +224,11 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
     # Convert tokenized sentences to word IDs and save validation data if not already done
     if not os.path.exists("processed_data/id_val_data{}".format(val_len)):
         tokenized_val_data = tokenized_val_data.map(
+<<<<<<< HEAD
             to_id_transform, batched=False, num_proc=n_processors
+=======
+            to_id_transform, batched=False, num_proc=19
+>>>>>>> ecdb713 (Refactor code and update dependencies)
         )
         tokenized_val_data.save_to_disk("processed_data/id_val_data{}".format(val_len))
 
@@ -225,8 +256,13 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
 
     # Pad sequences and convert to PyTorch tensors for train data
     for i, x in enumerate(tokenized_train_data):
+<<<<<<< HEAD
         idx_train_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
         idx_train_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
+=======
+        idx_train_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, m))
+        idx_train_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, n))
+>>>>>>> ecdb713 (Refactor code and update dependencies)
 
     # Pad sequences and convert to PyTorch tensors for validation data
     for i, x in enumerate(tokenized_val_data):
@@ -266,10 +302,17 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
     val_dataset = TranslationDataset(data["val"])
 
     train_dataloader = torch.utils.data.DataLoader(
+<<<<<<< HEAD
         train_dataset, batch_size=batch_size, shuffle=True
     )
     val_dataloader = torch.utils.data.DataLoader(
         val_dataset, batch_size=batch_size, shuffle=True
+=======
+        train_dataset, batch_size=64, shuffle=True
+    )
+    val_dataloader = torch.utils.data.DataLoader(
+        val_dataset, batch_size=64, shuffle=True
+>>>>>>> ecdb713 (Refactor code and update dependencies)
     )
     return (
         (data["train"], train_dataloader),

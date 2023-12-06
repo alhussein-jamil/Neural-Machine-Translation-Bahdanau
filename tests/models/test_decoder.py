@@ -28,6 +28,7 @@ class TestDecoder(unittest.TestCase):
             dropout=0,
             type="GRU",
             bidirectional=False,
+<<<<<<< HEAD
         )
 
         config_maxout = dict(
@@ -38,6 +39,10 @@ class TestDecoder(unittest.TestCase):
         )
 
         self.config = dict(alignment=config_alignment, rnn=config_rnn, maxout=config_maxout)
+=======
+        )
+        self.config = dict(alignment=config_alignment, birnn=config_birnn)
+>>>>>>> ecdb713 (Refactor code and update dependencies)
         return super().setUp()
 
     def test_initalization(self):

@@ -29,8 +29,14 @@ class Alignment(nn.Module):
 
         return a
 
+<<<<<<< HEAD
 class MaxoutUnit(nn.Module):
     def __init__(self, input_size, output_size, device):
+=======
+
+class Decoder(nn.Module):
+    def __init__(self, config: Dict[str, Any]):
+>>>>>>> ecdb713 (Refactor code and update dependencies)
         super().__init__()
         self.neurons = FCNN(input_size,[],output_size,device)
     
@@ -79,6 +85,7 @@ class Decoder(nn.Module):
             # Compute alignment vector
             a = self.alignment(s.squeeze(0), h[:, i, :])
             e = F.softmax(a, dim=1)
+<<<<<<< HEAD
 
             # Compute context vector
             c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
@@ -92,3 +99,12 @@ class Decoder(nn.Module):
 
 
         return output
+=======
+            c = (h.swapaxes(1, 2) @ e.unsqueeze(2)).squeeze(
+                2
+            )  # c is of shape (batch_size, hidden_size)
+            y, s = self.birnn(c.unsqueeze(1), s)
+            output[:, i, :] = y.squeeze(1)
+
+        return F.softmax(output, dim=2)
+>>>>>>> ecdb713 (Refactor code and update dependencies)

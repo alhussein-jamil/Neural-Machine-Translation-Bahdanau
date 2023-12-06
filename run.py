@@ -63,7 +63,9 @@ if __name__ == "__main__":
             activation=torch.nn.ReLU(),
             last_layer_activation=torch.nn.Tanh(),
             dropout=0.2,
+<<<<<<< HEAD
     )
+<<<<<<< HEAD
 
     maxout_cfg = dict(
         input_size=args.hidden_size,
@@ -93,3 +95,8 @@ if __name__ == "__main__":
     model = AlignAndTranslate(**translator_cfg)
 
     model.train(train_loader=train_dataloader, val_loader=val_dataloader)
+=======
+=======
+    )
+>>>>>>> ea636e9 (Refactor code and update dependencies)
+>>>>>>> ecdb713 (Refactor code and update dependencies)

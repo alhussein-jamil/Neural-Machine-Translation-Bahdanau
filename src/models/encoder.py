@@ -7,6 +7,7 @@ from models.rnn import RNN
 
 class Encoder(nn.Module):
     def __init__(
+<<<<<<< HEAD
         self, **kwargs
     ):
         rnn_hidden_size = kwargs.get("rnn_hidden_size", 5)  
@@ -15,6 +16,10 @@ class Encoder(nn.Module):
         vocab_size = kwargs.get("vocab_size", 5)
         rnn_type = kwargs.get("rnn_type", "GRU")
         
+=======
+        self, rnn_hidden_size, rnn_num_layers, rnn_device, vocab_size=5, rnn_type="GRU"
+    ):
+>>>>>>> ecdb713 (Refactor code and update dependencies)
         super().__init__()
         self.vocab_size = vocab_size
         # Utiliser la classe RNN dans Encoder
@@ -27,12 +32,19 @@ class Encoder(nn.Module):
             dropout=0,
             bidirectional=True,
             type=rnn_type,
+<<<<<<< HEAD
 
+=======
+>>>>>>> ecdb713 (Refactor code and update dependencies)
         )
 
     def forward(self, x):
         # Appliquer le one-hot coding
+<<<<<<< HEAD
         v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size).float()
+=======
+        v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size)
+>>>>>>> ecdb713 (Refactor code and update dependencies)
 
         # Appeler la classe RNN pour obtenir output et hidden
         rnn_output, rnn_hidden = self.rnn(v_one_hot)

@@ -80,7 +80,11 @@ class RNN(nn.Module):
         # Initialize hidden state
         if h0 is None:
             h0 = torch.zeros(
+<<<<<<< HEAD
                 self.num_layers *( 2 if self.rnn.bidirectional else 1),
+=======
+                self.num_layers * 1 if not self.rnn.bidirectional else 2,
+>>>>>>> ecdb713 (Refactor code and update dependencies)
                 x.size(0),
                 self.hidden_size,
             ).to(self.device)
