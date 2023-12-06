@@ -76,8 +76,8 @@ if __name__ == "__main__":
             activation=torch.nn.ReLU(),
             last_layer_activation=torch.nn.Tanh(),
             dropout=0.2,
-<<<<<<< HEAD
     )
+<<<<<<< HEAD
 <<<<<<< HEAD
 
     maxout_cfg = dict(
@@ -92,6 +92,13 @@ if __name__ == "__main__":
 
     config_encoder = dict(
         rnn_hidden_size = args.hidden_size,
+=======
+    config_decoder = dict(alignment=alignment_cfg, rnn=config_rnn_decoder)
+
+
+    config_encoder = dict(
+        rnn_hidden_size = args.enc_out_size,
+>>>>>>> 4144bbd (Add data preprocessing and translation model to)
         rnn_num_layers = 1,
         rnn_device = device,
         vocab_size=len(bow_en) + 1,
@@ -107,6 +114,7 @@ if __name__ == "__main__":
 
     model = AlignAndTranslate(**translator_cfg)
 
+<<<<<<< HEAD
     model.train(train_loader=train_dataloader, val_loader=val_dataloader)
 =======
 =======
@@ -117,3 +125,6 @@ if __name__ == "__main__":
 =======
     )
 >>>>>>> 4addc1d (Fix alignment vector computation in Decoder)
+=======
+    model.train(train_loader=train_dataloader, val_loader=val_dataloader)
+>>>>>>> 4144bbd (Add data preprocessing and translation model to)
