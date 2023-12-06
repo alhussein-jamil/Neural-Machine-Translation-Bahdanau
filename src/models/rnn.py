@@ -109,71 +109,33 @@ class Encoder(nn.Module):
 
         return rnn_output, rnn_hidden
         
-'''      
-en = Encoder(vocab_size=5)
-print(en(torch.tensor([
-    (4,2,1),
-    (2,1,0)
-])))'''
 
-<<<<<<< Updated upstream
-en = Encoder(
-    rnn_hidden_size=16,
-    rnn_num_layers=1,
-    rnn_device='cpu',  # Vous pouvez spécifier le périphérique approprié ici
-    vocab_size=5
-)
-
-# Définir une séquence d'entrée (utiliser des listes au lieu de tuples)
-sequence_input = torch.tensor([
-    [4, 2, 1],
-    [2, 1, 0]
-])
-
-# Appeler l'encodeur pour obtenir le vecteur c
-encoded_output, encoded_hidden = en(sequence_input)
-
-# Afficher la sortie encodée et l'état caché
-print("Encoded Output:")
-print(encoded_output)
-print("Encoded Hidden State:")
-print(encoded_hidden)
-=======
-en(torch.rand(3,5))
-
->>>>>>> Stashed changes
-
-
-class Encoder(nn.Module):
-    def __init__(self,device, vocab_size = 5 ,hidden_size= 64, num_layers= 64 , dropout=0, bidirectional= True):
-
-        super().__init__()
+class Decoder(nn.Module):
+    def __init__(self, vocab_size=5, hidden_size=64, num_layers=1, device='cpu', dropout=0.0):
+        super(Decoder, self).__init__()
 
         self.vocab_size = vocab_size
-        self.hidden_size=hidden_size,
-        self.num_layers=num_layers,
-        self.device=device,
-        self.dropout= dropout.to(device)
-        self.rnn = RNN( hidden_size, num_layers, device, dropout) 
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.device = device
 
-    def forward(self, x):
-        k, t_x = x.shape
+        self.rnn = nn.RNN(
+            input_size=vocab_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout,
+        ).to(device)
+
+        self.fc = nn.Linear(hidden_size, vocab_size).to(device)
+
+    def forward(self, x, hidden):
+        # x est la sortie du décodeur précédent (ou le mot cible au premier pas de temps)
+        # hidden l'état caché de l'encodeur au premier pas de temps)
+
+        output, hidden = self.rnn(x, hidden)
+        output = self.fc(output)
+
+        return output, hidden
 
 
-        v = torch.zeros(k, t_x, self.vocab_size)
-
-        #Appliquer le one-hot coding
-        v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size)
-
-        # Appeler la classe RNN pour obtenir output et hidden
-         
-
-        rnn_output, rnn_hidden = self.rnn(v_one_hot)
-
-        return rnn_output, rnn_hidden
-        
-en = Encoder(vocab_size=5)
-print(en(torch.tensor([
-    (4,2,1),
-    (2,1,0)
-])))
