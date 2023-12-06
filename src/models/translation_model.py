@@ -3,7 +3,7 @@ from models.encoder import Encoder
 from models.decoder import Decoder
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
-
+import torch 
 
 
 
@@ -25,7 +25,7 @@ class AlignAndTranslate(nn.Module):
             self.criterion = None
 
     def forward(self, x):
-        encoder_output, encoder_hidden = self.encoder(x)
+        encoder_output, _ = self.encoder(x)
         decoder_output = self.decoder(encoder_output)
         return decoder_output
 
@@ -64,37 +64,20 @@ class AlignAndTranslate(nn.Module):
 
             average_loss = total_loss / len(train_loader)
             print(f'Training - Epoch {epoch + 1}/{n_epochs}, Loss: {average_loss}')
-            '''
-            # Validation
-            self.eval()
-            with torch.no_grad():
-                val_loss = 0
-                for batch in test_loader:
-                    input_data, target_data = batch["english"]["idx"], batch["french"]["idx"]
-                    output = self(input_data)
-                    val_loss += self.criterion(output, target_data).item()
 
-                average_val_loss = val_loss / len(test_loader)
-                print(f'Validation - Epoch {epoch + 1}/{n_epochs}, Loss: {average_val_loss}')
-            '''
     def predict(self, test_loader):
         self.eval()  # Mettre le modèle en mode évaluation
         predictions = []
+        val_loss = 0
 
         with torch.no_grad():
             for batch in test_loader:
-                input_data, _ = batch["english"]["idx"], batch["english"]["idx"]
+                input_data, target_data = batch["english"]["idx"], batch["french"]["idx"]
                 output = self(input_data)
 
                 # Convertir les probabilités en indices
                 _, topi = output.topk(1)
                 predictions.append(topi.squeeze().detach())  # Détacher sans convertir en numpy array
-
-            # Validation
-            val_loss = 0
-            for batch in test_loader:
-                input_data, target_data = batch["english"]["idx"], batch["english"]["idx"]
-                output = self(input_data)
                 val_loss += self.criterion(output, target_data).item()
 
             average_val_loss = val_loss / len(test_loader)
