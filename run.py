@@ -45,10 +45,18 @@ if __name__ == "__main__":
         train_len=args.train_len, val_len=args.val_len, kx=1000, ky=1000, Tx=30, Ty=30
     )
     device = "cpu" if not torch.cuda.is_available() else "cuda"
+<<<<<<< HEAD
     
     config_rnn_decoder = dict(
             input_size=args.hidden_size * 2,
             hidden_size=args.hidden_size,
+=======
+
+
+    config_rnn_decoder = dict(
+            input_size=args.enc_out_size * 2,
+            hidden_size=10,
+>>>>>>> 4addc1d (Fix alignment vector computation in Decoder)
             num_layers=1,
             device=device,
             dropout=0,
@@ -56,8 +64,13 @@ if __name__ == "__main__":
             bidirectional=False,
         )
     alignment_cfg = dict(
+<<<<<<< HEAD
             input_size=args.hidden_size * 2 + config_rnn_decoder["hidden_size"],
             hidden_sizes=[],
+=======
+            input_size=args.enc_out_size * 2 + config_rnn_decoder["hidden_size"],
+            hidden_sizes=[10, 10],
+>>>>>>> 4addc1d (Fix alignment vector computation in Decoder)
             output_size=args.Ty,
             device= device,
             activation=torch.nn.ReLU(),
@@ -97,6 +110,10 @@ if __name__ == "__main__":
     model.train(train_loader=train_dataloader, val_loader=val_dataloader)
 =======
 =======
+<<<<<<< HEAD
     )
 >>>>>>> ea636e9 (Refactor code and update dependencies)
 >>>>>>> ecdb713 (Refactor code and update dependencies)
+=======
+    )
+>>>>>>> 4addc1d (Fix alignment vector computation in Decoder)

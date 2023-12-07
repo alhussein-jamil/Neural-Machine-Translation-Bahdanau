@@ -72,7 +72,11 @@ class Decoder(nn.Module):
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
         # Initialize output tensor
+<<<<<<< HEAD
         output = torch.zeros(h.size(0), h.size(1), self.maxout.num_units).to(h.device)
+=======
+        output = torch.zeros(h.size(0), h.size(1), self.rnn.hidden_size).to(h.device)
+>>>>>>> 4addc1d (Fix alignment vector computation in Decoder)
 
         # Initialize context vector
         s = torch.zeros(
@@ -86,12 +90,16 @@ class Decoder(nn.Module):
             a = self.alignment(s.squeeze(0), h[:, i, :])
             e = F.softmax(a, dim=1)
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4addc1d (Fix alignment vector computation in Decoder)
 
             # Compute context vector
             c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
 
             # Compute output and update context vector
             y, s = self.rnn(c.unsqueeze(1), s)
+<<<<<<< HEAD
             maxed_out = self.maxout(y.squeeze(1))
             softmaxed = F.softmax(maxed_out, dim=1)
 
@@ -104,6 +112,8 @@ class Decoder(nn.Module):
                 2
             )  # c is of shape (batch_size, hidden_size)
             y, s = self.birnn(c.unsqueeze(1), s)
+=======
+>>>>>>> 4addc1d (Fix alignment vector computation in Decoder)
             output[:, i, :] = y.squeeze(1)
 
         return F.softmax(output, dim=2)
