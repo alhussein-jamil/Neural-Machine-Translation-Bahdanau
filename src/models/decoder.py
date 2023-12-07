@@ -31,10 +31,11 @@ class Alignment(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, **kwargs):
         super().__init__()
-        self.alignment = Alignment(**config["alignment"])
-        self.birnn = RNN(**config["birnn"])
+
+        self.alignment = Alignment(**kwargs["alignment"])
+        self.rnn = RNN(**kwargs["rnn"])
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         """
@@ -50,12 +51,12 @@ class Decoder(nn.Module):
         # this function outputs a tensor of size (batch_size, Ty) containing the predicted indices of the output tokens
         # first, we need to find the context vector c
         # we do this by finding the alignment vector a
-        output = torch.zeros(h.size(0), h.size(1), self.birnn.hidden_size).to(h.device)
+        output = torch.zeros(h.size(0), h.size(1), self.rnn.hidden_size).to(h.device)
 
         s = torch.zeros(
-            self.birnn.num_layers * 1 if not self.birnn.rnn.bidirectional else 2,
+            self.rnn.num_layers * 1 if not self.rnn.rnn.bidirectional else 2,
             h.size(0),
-            self.birnn.hidden_size,
+            self.rnn.hidden_size,
         ).to(h.device)
 
         for i in range(h.size(1)):
@@ -64,7 +65,7 @@ class Decoder(nn.Module):
             c = (h.swapaxes(1, 2) @ e.unsqueeze(2)).squeeze(
                 2
             )  # c is of shape (batch_size, hidden_size)
-            y, s = self.birnn(c.unsqueeze(1), s)
+            y, s = self.rnn(c.unsqueeze(1), s)
             output[:, i, :] = y.squeeze(1)
-
+  
         return F.softmax(output, dim=2)

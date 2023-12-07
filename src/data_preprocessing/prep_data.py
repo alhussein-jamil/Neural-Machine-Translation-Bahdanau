@@ -102,7 +102,7 @@ class to_tensor:
         }
 
 
-def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30):
+def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30, batch_size=32):
     """
     Load and preprocess data for training and validation.
     """
@@ -264,10 +264,10 @@ def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30):
     val_dataset = TranslationDataset(data["val"])
 
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=64, shuffle=True
+        train_dataset, batch_size=batch_size, shuffle=True
     )
     val_dataloader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=64, shuffle=True
+        val_dataset, batch_size=batch_size, shuffle=True
     )
     return (
         (data["train"], train_dataloader),
