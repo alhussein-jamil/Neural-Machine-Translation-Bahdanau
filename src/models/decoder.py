@@ -47,25 +47,26 @@ class Decoder(nn.Module):
         Returns:
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
-        # h is the output of the encoder and has sizes (batch_size, Tx, hidden_size),
-        # this function outputs a tensor of size (batch_size, Ty) containing the predicted indices of the output tokens
-        # first, we need to find the context vector c
-        # we do this by finding the alignment vector a
+        # Initialize output tensor
         output = torch.zeros(h.size(0), h.size(1), self.rnn.hidden_size).to(h.device)
 
+        # Initialize context vector
         s = torch.zeros(
-            self.rnn.num_layers * 1 if not self.rnn.rnn.bidirectional else 2,
+            self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
             h.size(0),
             self.rnn.hidden_size,
         ).to(h.device)
 
         for i in range(h.size(1)):
+            # Compute alignment vector
             a = self.alignment(s.squeeze(0), h[:, i, :])
             e = F.softmax(a, dim=1)
-            c = (h.swapaxes(1, 2) @ e.unsqueeze(2)).squeeze(
-                2
-            )  # c is of shape (batch_size, hidden_size)
+
+            # Compute context vector
+            c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
+
+            # Compute output and update context vector
             y, s = self.rnn(c.unsqueeze(1), s)
             output[:, i, :] = y.squeeze(1)
-  
+
         return F.softmax(output, dim=2)
