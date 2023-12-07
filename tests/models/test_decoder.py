@@ -20,16 +20,16 @@ class TestDecoder(unittest.TestCase):
             last_layer_activation=torch.nn.Sigmoid(),
             dropout=0.2,
         )
-        config_birnn = dict(
+        config_rnn = dict(
             input_size=self.encoder_out_size,
-            hidden_size=12,
+            hidden_size=self.decoder_out_size,
             num_layers=1,
             device="cpu",
             dropout=0,
             type="GRU",
             bidirectional=False,
         )
-        self.config = dict(alignment=config_alignment, birnn=config_birnn)
+        self.config = dict(alignment=config_alignment, rnn=config_rnn)
         return super().setUp()
 
     def test_initalization(self):
