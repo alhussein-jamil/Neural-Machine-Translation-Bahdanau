@@ -27,6 +27,7 @@ class Encoder(nn.Module):
             dropout=0,
             bidirectional=True,
             type=rnn_type,
+
         )
 
     def forward(self, x):

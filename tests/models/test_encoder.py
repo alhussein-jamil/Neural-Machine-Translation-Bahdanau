@@ -1,6 +1,6 @@
 import unittest
 import torch
-from encoder import Encoder  
+from models.encoder import Encoder
 
 class TestEncoder(unittest.TestCase):
 

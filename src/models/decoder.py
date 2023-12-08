@@ -29,6 +29,23 @@ class Alignment(nn.Module):
 
         return a
 
+class MaxoutUnit(nn.Module):
+    def __init__(self, input_size, output_size, device):
+        super().__init__()
+        self.neurons = FCNN(input_size,[],output_size,device)
+    
+    def forward(self, x):
+        return torch.max(self.neurons(x), dim=1)[0] 
+
+class Maxout(nn.Module):
+    def __init__(self, input_size, output_size, num_units, device):
+        super().__init__()
+        self.num_units = num_units
+        self.maxout_units = nn.ModuleList()
+        for _ in range(num_units):
+            self.maxout_units.append(MaxoutUnit(input_size, output_size, device))
+    def forward(self, x):
+        return torch.stack([maxout_unit(x) for maxout_unit in self.maxout_units], dim=1)
 
 class Decoder(nn.Module):
     def __init__(self, **kwargs):
@@ -36,6 +53,7 @@ class Decoder(nn.Module):
 
         self.alignment = Alignment(**kwargs["alignment"])
         self.rnn = RNN(**kwargs["rnn"])
+        self.maxout = Maxout(**kwargs["maxout"])
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         """
@@ -48,7 +66,7 @@ class Decoder(nn.Module):
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
         # Initialize output tensor
-        output = torch.zeros(h.size(0), h.size(1), self.rnn.hidden_size).to(h.device)
+        output = torch.zeros(h.size(0), h.size(1), self.maxout.num_units).to(h.device)
 
         # Initialize context vector
         s = torch.zeros(
@@ -67,6 +85,10 @@ class Decoder(nn.Module):
 
             # Compute output and update context vector
             y, s = self.rnn(c.unsqueeze(1), s)
-            output[:, i, :] = y.squeeze(1)
+            maxed_out = self.maxout(y.squeeze(1))
+            softmaxed = F.softmax(maxed_out, dim=1)
 
-        return F.softmax(output, dim=2)
+            output[:, i, :] = softmaxed
+
+
+        return output
