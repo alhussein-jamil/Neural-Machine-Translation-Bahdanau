@@ -24,7 +24,7 @@ if __name__ == "__main__":
         "--hidden_size", type=int, default=12, help="Size of the hidden layers"
     )
     parser.add_argument(    
-        "--max_out_units", type=int, default=23, help="Size of the hidden layers"
+        "--max_out_units", type=int, default=2, help="Size of the hidden layers"
     )
 
     args = parser.parse_args()
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         (val_data, val_dataloader),
         (bow_en, bow_fr),
     ) = load_data(
-        train_len=args.train_len, val_len=args.val_len, kx=1000, ky=1000, Tx=30, Ty=30
+        train_len=args.train_len, val_len=args.val_len, kx=1000, ky=1000, Tx=30, Ty=30, batch_size = 1000
     )
     device = "cpu" if not torch.cuda.is_available() else "cuda"
     
