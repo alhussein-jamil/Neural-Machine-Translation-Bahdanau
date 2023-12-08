@@ -5,3 +5,4 @@ plots/
 data/t*
 *cache*
 *processed_data/*
+*.pth
