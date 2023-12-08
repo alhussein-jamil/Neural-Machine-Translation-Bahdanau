@@ -6,7 +6,9 @@ import torch
 from datasets import load_dataset, load_from_disk
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch.utils.data import Dataset
+from multiprocessing import cpu_count
 
+n_processors = cpu_count()
 
 class TokenizerWrapper:
     """
@@ -139,7 +141,7 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
         tokenized_train_data = train_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
-            num_proc=19,
+            num_proc=n_processors,
             remove_columns=["translation"],
         )
         tokenized_train_data.save_to_disk(
@@ -151,7 +153,7 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
         tokenized_val_data = val_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
-            num_proc=19,
+            num_proc=n_processors,
             remove_columns=["translation"],
         )
         tokenized_val_data.save_to_disk(
@@ -186,7 +188,7 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
     # Convert tokenized sentences to word IDs and save train data if not already done
     if not os.path.exists("processed_data/id_train_data{}".format(train_len)):
         tokenized_train_data = tokenized_train_data.map(
-            to_id_transform, batched=False, num_proc=19
+            to_id_transform, batched=False, num_proc=n_processors
         )
         tokenized_train_data.save_to_disk(
             "processed_data/id_train_data{}".format(train_len)
@@ -195,7 +197,7 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
     # Convert tokenized sentences to word IDs and save validation data if not already done
     if not os.path.exists("processed_data/id_val_data{}".format(val_len)):
         tokenized_val_data = tokenized_val_data.map(
-            to_id_transform, batched=False, num_proc=19
+            to_id_transform, batched=False, num_proc=n_processors
         )
         tokenized_val_data.save_to_disk("processed_data/id_val_data{}".format(val_len))
 
