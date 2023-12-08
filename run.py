@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser()
 if __name__ == "__main__":
     # Parse arguments
     parser.add_argument(
-        "--train_len", type=int, default=10000, help="Number of training examples"
+        "--train_len", type=int, default=100000, help="Number of training examples"
     )
     parser.add_argument(
         "--val_len", type=int, default=1000, help="Number of validation examples"
@@ -44,6 +44,7 @@ if __name__ == "__main__":
         Ty=args.Ty,
         batch_size=32,
     )
+
     device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     config_rnn_decoder = dict(
