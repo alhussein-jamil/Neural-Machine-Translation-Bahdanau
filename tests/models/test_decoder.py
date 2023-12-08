@@ -29,15 +29,23 @@ class TestDecoder(unittest.TestCase):
             type="GRU",
             bidirectional=False,
         )
-        self.config = dict(alignment=config_alignment, rnn=config_rnn)
+
+        config_maxout = dict(
+            input_size=self.decoder_out_size,
+            output_size=self.seqlen,
+            num_units=self.decoder_out_size,
+            device="cpu",
+        )
+
+        self.config = dict(alignment=config_alignment, rnn=config_rnn, maxout=config_maxout)
         return super().setUp()
 
     def test_initalization(self):
-        decoder = Decoder(self.config)
+        decoder = Decoder(**self.config)
         self.assertIsInstance(decoder, torch.nn.Module)
 
     def test_forward(self):
-        decoder = Decoder(self.config)
+        decoder = Decoder(**self.config)
         output = decoder(self.sample_entry)
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 

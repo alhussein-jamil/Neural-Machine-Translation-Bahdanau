@@ -102,7 +102,7 @@ class to_tensor:
         }
 
 
-def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30, batch_size=32):
+def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=32):
     """
     Load and preprocess data for training and validation.
     """
@@ -112,8 +112,8 @@ def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30, batch_size=32)
     # Load English and French unigram frequency data
     bow_english = pd.read_csv("data/unigram_freq_en.csv")
     bow_french = pd.read_csv("data/unigram_freq_fr.csv")
-    bow_english = bow_english[:n]
-    bow_french = bow_french[:m]
+    bow_english = bow_english[:kx]
+    bow_french = bow_french[:ky]
 
     # Load WMT14 dataset
     wmt14 = load_dataset("wmt14", "fr-en", data_dir="data/")
@@ -170,10 +170,10 @@ def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30, batch_size=32)
     most_frequent_french_words = bow_french["word"].apply(lambda x: str(x)).tolist()
     tokenized_most_frequent_english_words = mt_en.tokenize(
         " ".join(most_frequent_english_words)
-    )[: n - 1]
+    )[: kx - 1]
     tokenized_most_frequent_french_words = mt_fr.tokenize(
         " ".join(most_frequent_french_words)
-    )[: m - 1]
+    )[: ky - 1]
     tokenized_most_frequent_english_words.append("<unk>")
     tokenized_most_frequent_french_words.append("<unk>")
 
@@ -223,13 +223,13 @@ def load_data(train_len, val_len, n=30000, m=30000, Tx=30, Ty=30, batch_size=32)
 
     # Pad sequences and convert to PyTorch tensors for train data
     for i, x in enumerate(tokenized_train_data):
-        idx_train_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, m))
-        idx_train_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, n))
+        idx_train_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
+        idx_train_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
 
     # Pad sequences and convert to PyTorch tensors for validation data
     for i, x in enumerate(tokenized_val_data):
-        idx_val_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, m))
-        idx_val_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, n))
+        idx_val_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
+        idx_val_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
 
     # Extract English and French sentences for train and validation data
     train_english_sentences = [
