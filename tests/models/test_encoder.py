@@ -18,6 +18,7 @@ class TestEncoder(unittest.TestCase):
             rnn_device="cpu",
             vocab_size=20,
             rnn_type="GRU",
+            embedding_size=10,
         )
 
         # Generate dummy data for the test

@@ -16,16 +16,26 @@ if __name__ == "__main__":
         "--val_len", type=int, default=1000, help="Number of validation examples"
     )
     parser.add_argument(
-        "--Tx", type=int, default=5, help="Length of the input sequence"
+        "--Tx", type=int, default=30, help="Length of the input sequence"
     )
     parser.add_argument(
-        "--Ty", type=int, default=5, help="Length of the output sequence"
+        "--Ty", type=int, default=30, help="Length of the output sequence"
     )
     parser.add_argument(
-        "--hidden_size", type=int, default=12, help="Size of the hidden layers"
+        "--hidden_size", type=int, default=1000, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--max_out_units", type=int, default=2, help="Size of the hidden layers"
+        "--encoder_hidden_size", "-n", type=int, default=1000, help="Size of the hidden layers"
+    )
+    parser.add_argument(
+        "--embedding_size", "-m", type=int, default=620, help="Size of the embedding"
+    )
+    parser.add_argument(    
+        "--allignment_units", type=int, default=1000, help="Size of the hidden layers"
+    )
+
+    parser.add_argument(
+        "--max_out_units", type=int, default=500, help="Size of the hidden layers"
     )
 
     args = parser.parse_args()
@@ -58,7 +68,7 @@ if __name__ == "__main__":
     )
     alignment_cfg = dict(
         input_size=args.hidden_size * 2 + config_rnn_decoder["hidden_size"],
-        hidden_sizes=[],
+        hidden_sizes=[args.allignment_units],
         output_size=args.Ty,
         device=device,
         activation=torch.nn.ReLU(),
@@ -74,11 +84,11 @@ if __name__ == "__main__":
     )
     fcnn_cfg = dict(
         input_size=args.hidden_size,
-        hidden_sizes=[],
+        hidden_sizes=[args.max_out_units],
         output_size=len(bow_fr) + 1,
         device=device,
         activation=torch.nn.ReLU(),
-        last_layer_activation=torch.nn.Tanh(),
+        last_layer_activation=torch.nn.Identity(),
         dropout=0.2,
     )
 
@@ -90,11 +100,12 @@ if __name__ == "__main__":
     )
 
     config_encoder = dict(
-        rnn_hidden_size=args.hidden_size,
+        rnn_hidden_size=args.encoder_hidden_size,
         rnn_num_layers=1,
         rnn_device=device,
         vocab_size=len(bow_en) + 1,
         rnn_type="GRU",
+        embedding_size = args.embedding_size,
     )
 
     training_cfg = dict(
