@@ -6,15 +6,13 @@ from models.rnn import RNN
 
 
 class Encoder(nn.Module):
-    def __init__(
-        self, **kwargs
-    ):
-        rnn_hidden_size = kwargs.get("rnn_hidden_size", 5)  
+    def __init__(self, **kwargs):
+        rnn_hidden_size = kwargs.get("rnn_hidden_size", 5)
         rnn_num_layers = kwargs.get("rnn_num_layers", 1)
         rnn_device = kwargs.get("rnn_device", "cpu")
         vocab_size = kwargs.get("vocab_size", 5)
         rnn_type = kwargs.get("rnn_type", "GRU")
-        
+
         super().__init__()
         self.vocab_size = vocab_size
         # Utiliser la classe RNN dans Encoder
@@ -27,7 +25,6 @@ class Encoder(nn.Module):
             dropout=0,
             bidirectional=True,
             type=rnn_type,
-
         )
 
     def forward(self, x):
