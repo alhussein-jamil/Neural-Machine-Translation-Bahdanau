@@ -4,6 +4,7 @@ import numpy as np
 import collections
 
 class BLEUScoreExample:
+    
     """
     Classe pour calculer le score BLEU.
 
