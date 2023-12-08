@@ -1,4 +1,6 @@
 import os
+from multiprocessing import cpu_count
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -6,9 +8,9 @@ import torch
 from datasets import load_dataset, load_from_disk
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch.utils.data import Dataset
-from multiprocessing import cpu_count
 
 n_processors = cpu_count()
+
 
 class TokenizerWrapper:
     """
@@ -37,6 +39,27 @@ class TokenizerWrapper:
             "tokenized_fr": self.tokenizer_fr.tokenize(preprocessed_fr),
         }
 
+class toWordCount:
+    """
+    Transform class to convert tokenized sentences to corresponding word IDs.
+    """
+
+    def __init__(self, cont):
+        self.cont = cont
+    def __call__(self, tokenized):
+        count_en = self.cont()
+        count_fr = self.cont()
+        count_en.update(tokenized["tokenized_en"])
+        count_fr.update(tokenized["tokenized_fr"])
+
+        return {
+            "count_en_words": list(count_en.keys()),
+            "count_en_freq": list(count_en.values()),
+            "count_fr_words": list(count_fr.keys()),
+            "count_fr_freq": list(count_fr.values()),
+        }
+    
+            
 
 class toIdTransform:
     """
@@ -104,18 +127,54 @@ class to_tensor:
         }
 
 
-def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=32):
+from collections import Counter
+
+
+def extract_word_frequency(data):
+    word_freq = {"en": Counter(), "fr": Counter()}
+    for i, x in enumerate(data):
+        for lang in ["en", "fr"]:
+            word_freq_dict = dict(zip(x["count_{}_words".format(lang)], x["count_{}_freq".format(lang)]))
+            word_freq[lang].update(word_freq_dict)
+        print("Processed {} / {} samples".format(i + 1, len(data)), end="\r")
+    df_en = pd.DataFrame(word_freq["en"].items(), columns=["word", "freq"])
+    df_fr = pd.DataFrame(word_freq["fr"].items(), columns=["word", "freq"])
+
+    df_en.sort_values(by=["freq"], ascending=False, inplace=True)
+    df_fr.sort_values(by=["freq"], ascending=False, inplace=True)
+
+    return df_en, df_fr
+
+
+from transformers import AutoTokenizer
+
+
+# import autotokenizer
+def load_data(
+    train_len,
+    val_len,
+    kx=30000,
+    ky=30000,
+    Tx=30,
+    Ty=30,
+    batch_size=32,
+    tokenizer="Moses",
+    vocab_source="train",
+):
     """
     Load and preprocess data for training and validation.
     """
-    mt_en = MosesTokenizer(lang="en")
-    mt_fr = MosesTokenizer(lang="fr")
 
-    # Load English and French unigram frequency data
-    bow_english = pd.read_csv("data/unigram_freq_en.csv")
-    bow_french = pd.read_csv("data/unigram_freq_fr.csv")
-    bow_english = bow_english[:kx]
-    bow_french = bow_french[:ky]
+    mt_en = (
+        MosesTokenizer(lang="en")
+        if tokenizer == "Moses"
+        else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+    )
+    mt_fr = (
+        MosesTokenizer(lang="fr")
+        if tokenizer == "Moses"
+        else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+    )
 
     # Load WMT14 dataset
     wmt14 = load_dataset("wmt14", "fr-en", data_dir="data/")
@@ -166,6 +225,27 @@ def load_data(train_len, val_len, kx=30000, ky=30000, Tx=30, Ty=30, batch_size=3
     tokenized_val_data = load_from_disk(
         "processed_data/tokenized_val_data{}".format(val_len)
     )
+
+    if not os.path.exists("processed_data/word_count{}".format(train_len)):
+        word_count = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
+        word_count.save_to_disk("processed_data/word_count{}".format(train_len))
+    word_count = load_from_disk("processed_data/word_count{}".format(train_len))
+
+
+    if vocab_source == "train":
+        if not os.path.exists("data/unigram_freq_en_{}.csv".format(train_len)):
+            df_en, df_fr = extract_word_frequency(word_count)
+            df_en.to_csv("data/unigram_freq_en_{}.csv".format(train_len), index=False)
+            df_fr.to_csv("data/unigram_freq_fr_{}.csv".format(train_len), index=False)
+        df_en = pd.read_csv("data/unigram_freq_en_{}.csv".format(train_len))
+        df_fr = pd.read_csv("data/unigram_freq_fr_{}.csv".format(train_len))
+        bow_english, bow_french = df_en , df_fr
+    else:
+        bow_english = pd.read_csv("data/unigram_freq_en_ext.csv")
+        bow_french = pd.read_csv("data/unigram_freq_fr_ext.csv")
+
+    bow_english = bow_english[:kx]
+    bow_french = bow_french[:ky]
 
     # Get most frequent English and French words
     most_frequent_english_words = bow_english["word"].apply(lambda x: str(x)).tolist()

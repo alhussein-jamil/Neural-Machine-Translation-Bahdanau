@@ -27,12 +27,18 @@ class FCNN(nn.Module):
         self.fc = nn.ModuleList()
 
         # Add the first fully-connected layer
-        self.fc.append(nn.Linear(self.input_size, self.hidden_sizes[0] if len(self.hidden_sizes) > 0 else self.output_size))
+        self.fc.append(
+            nn.Linear(
+                self.input_size,
+                self.hidden_sizes[0]
+                if len(self.hidden_sizes) > 0
+                else self.output_size,
+            )
+        )
 
         # Add the remaining fully-connected layers
         for i in range(1, len(self.hidden_sizes)):
             self.fc.append(nn.Linear(self.hidden_sizes[i - 1], self.hidden_sizes[i]))
-
 
         if len(self.hidden_sizes) > 0:
             # Add the final fully-connected layer

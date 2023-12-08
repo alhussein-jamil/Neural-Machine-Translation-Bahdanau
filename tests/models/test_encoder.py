@@ -1,9 +1,11 @@
 import unittest
+
 import torch
+
 from models.encoder import Encoder
 
-class TestEncoder(unittest.TestCase):
 
+class TestEncoder(unittest.TestCase):
     def test_forward(self):
         # Define batch_size and sequence_length
         batch_size = 32
@@ -15,7 +17,7 @@ class TestEncoder(unittest.TestCase):
             rnn_num_layers=2,
             rnn_device="cpu",
             vocab_size=20,
-            rnn_type="GRU"
+            rnn_type="GRU",
         )
 
         # Generate dummy data for the test
@@ -26,8 +28,10 @@ class TestEncoder(unittest.TestCase):
 
         # Check that the output and hidden state have the expected dimensions
         self.assertEqual(rnn_output.shape, (batch_size, sequence_length, 20))
-        self.assertEqual(rnn_hidden.shape, (2 * encoder.rnn.num_layers, batch_size, 10))  # (2 * num_layers, batch_size, hidden_size)
+        self.assertEqual(
+            rnn_hidden.shape, (2 * encoder.rnn.num_layers, batch_size, 10)
+        )  # (2 * num_layers, batch_size, hidden_size)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
-

@@ -37,7 +37,9 @@ class TestDecoder(unittest.TestCase):
             device="cpu",
         )
 
-        self.config = dict(alignment=config_alignment, rnn=config_rnn, maxout=config_maxout)
+        self.config = dict(
+            alignment=config_alignment, rnn=config_rnn, maxout=config_maxout
+        )
         return super().setUp()
 
     def test_initalization(self):
