@@ -11,7 +11,7 @@ if __name__ == "__main__":
     # Parse arguments
 
     parser.add_argument(
-            "--train_len", type=int, default=1000000, help="Number of training examples"
+            "--train_len", type=int, default=100000, help="Number of training examples"
     )
     parser.add_argument(
         "--val_len", type=int, default=3000, help="Number of validation examples"
