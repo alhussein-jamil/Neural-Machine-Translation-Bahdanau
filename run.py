@@ -47,7 +47,7 @@ if __name__ == "__main__":
         "--train_len", type=int, default=100000, help="Number of training examples"
     )
     parser.add_argument(
-        "--val_len", type=int, default=1000, help="Number of validation examples"
+        "--val_len", type=int, default=3000, help="Number of validation examples"
     )
     parser.add_argument(
         "--Tx", type=int, default=4, help="Length of the input sequence"
