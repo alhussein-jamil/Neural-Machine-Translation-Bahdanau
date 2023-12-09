@@ -16,12 +16,12 @@ class AlignAndTranslate(nn.Module):
 
         training_config = kwargs.get("training", {})
 
-        self.criterion = training_config.get("criterion", nn.CrossEntropyLoss())
+        self.criterion = training_config.get("criterion", nn.CrossEntropyLoss(reduction="sum"))
         self.optimizer = training_config.get(
-            "optimizer", torch.optim.Adam(self.parameters(), lr=1e-3)
+            "optimizer", torch.optim.Adam(self.parameters(), lr=2e-3)
         )
         self.device = training_config.get("device", "cpu")
-        self.epochs = training_config.get("epochs", 10)
+        self.epochs = training_config.get("epochs", 100)
         self.batch_size = training_config.get("batch_size", 32)
         self.print_every = training_config.get("print_every", 100)
         self.save_every = training_config.get("save_every", 1000)
@@ -44,7 +44,7 @@ class AlignAndTranslate(nn.Module):
         y_idx = F.one_hot(
             y.to(self.device).long(), num_classes=self.output_vocab_size
         ).float()
-        loss = self.criterion(output, y_idx)
+        loss = self.criterion(output, y_idx) / self.batch_size
         loss.backward()
         self.optimizer.step()
         return loss.item()
