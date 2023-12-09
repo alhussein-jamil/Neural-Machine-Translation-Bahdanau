@@ -28,6 +28,32 @@ class Alignment(nn.Module):
         a = self.nn(torch.cat((s, h), dim=1))
 
         return a
+'''
+class Alignment(nn.Module):
+    def __init__(self, **kwargs):
+        super(Alignment, self).__init__()
+        # Assuming FCNN is a neural network module
+        self.nn_s = FCNN(**kwargs)
+        self.nn_h = FCNN(**kwargs)
+        self.tanh = nn.Tanh()
+
+    def forward(self, s: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass of the Alignment module.
+
+        Args:
+            s (torch.Tensor): Tensor representing the context from the decoder.
+            h (torch.Tensor): Tensor representing the hidden states from the encoder.
+
+        Returns:
+            torch.Tensor: Alignment vector.
+        """
+        # Pre-compute Ua * hj
+        # Find the alignment network response
+        a = self.tanh(self.nn_s(s) + self.nn_h(h))
+
+        return a
+'''
 
 
 class MaxoutUnit(nn.Module):
@@ -117,8 +143,8 @@ class Decoder(nn.Module):
             # fcnn_out = self.fcnn(embed_y_i.squeeze(1))
             # softmaxed = F.softmax(maxed_out, dim=1)
             # softmaxed = F.log_softmax(fcnn_out, dim=1)
-            # softmaxed = F.softmax(output_network_out, dim=1)
-            output[:, i, :] = output_network_out
+            softmaxed = F.log_softmax(output_network_out, dim=1)
+            output[:, i, :] = softmaxed
 
         return output
 
