@@ -57,7 +57,7 @@ class Decoder(nn.Module):
 
         self.alignment = Alignment(**kwargs["alignment"])
         self.rnn = RNN(**kwargs["rnn"])
-        self.maxout = Maxout(**kwargs["maxout"])
+        # self.maxout = Maxout(**kwargs["maxout"])
         self.fcnn = FCNN(**kwargs["fcnn"])
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
@@ -71,7 +71,7 @@ class Decoder(nn.Module):
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
         # Initialize output tensor
-        output = torch.zeros(h.size(0), h.size(1), self.maxout.num_units).to(h.device)
+        output = torch.zeros(h.size(0), h.size(1), self.fcnn.output_size).to(h.device)
 
         # Initialize context vector
         s = torch.zeros(
