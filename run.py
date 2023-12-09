@@ -11,7 +11,7 @@ if __name__ == "__main__":
     # Parse arguments
 
     parser.add_argument(
-            "--train_len", type=int, default=100000, help="Number of training examples"
+            "--train_len", type=int, default=1000000, help="Number of training examples"
     )
     parser.add_argument(
         "--val_len", type=int, default=None, help="Number of validation examples"
@@ -128,6 +128,7 @@ if __name__ == "__main__":
 
     decoder_embedding_cfg = dict(
         embedding_size = args.embedding_size,
+        device=device,
     )
 
     decoder_fcnn_cfg = dict(
