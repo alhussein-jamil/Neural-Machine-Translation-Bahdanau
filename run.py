@@ -10,30 +10,30 @@ parser = argparse.ArgumentParser()
 if __name__ == "__main__":
     # Parse arguments
 
-#    parser.add_argument(
-#         "--train_len", type=int, default=None, help="Number of training examples"
-#     )
-#     parser.add_argument(
-#         "--val_len", type=int, default=None, help="Number of validation examples"
-#     )
-#     parser.add_argument(
-#         "--Tx", type=int, default=30, help="Length of the input sequence"
-#     )
-#     parser.add_argument(
-#         "--Ty", type=int, default=30, help="Length of the output sequence"
-#     )
-#     parser.add_argument(
-#         "--decoder_hidden_size", "-nprime", type=int, default=1000, help="Size of the hidden layers"
-#     )
-#     parser.add_argument(
-#         "--encoder_hidden_size", "-n", type=int, default=1000, help="Size of the hidden layers"
-#     )
-#     parser.add_argument(
-#         "--embedding_size", "-m", type=int, default=620, help="Size of the embedding"
-#     )
-#     parser.add_argument(
-#         "--max_out_units", type=int, default=500, help="Size of the hidden layers"
-#     )
+    # parser.add_argument(
+    #         "--train_len", type=int, default=None, help="Number of training examples"
+    # )
+    # parser.add_argument(
+    #     "--val_len", type=int, default=None, help="Number of validation examples"
+    # )
+    # parser.add_argument(
+    #     "--Tx", type=int, default=30, help="Length of the input sequence"
+    # )
+    # parser.add_argument(
+    #     "--Ty", type=int, default=30, help="Length of the output sequence"
+    # )
+    # parser.add_argument(
+    #     "--decoder_hidden_size", "-nprime", type=int, default=1000, help="Size of the hidden layers"
+    # )
+    # parser.add_argument(
+    #     "--encoder_hidden_size", "-n", type=int, default=1000, help="Size of the hidden layers"
+    # )
+    # parser.add_argument(
+    #     "--embedding_size", "-m", type=int, default=620, help="Size of the embedding"
+    # )
+    # parser.add_argument(
+    #     "--max_out_units", type=int, default=500, help="Size of the hidden layers"
+    # )
     # parser.add_argument(
     #     "--vocab_size_en", type=int, default=30000, help="Size of the hidden layers"
     # )
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
 
     parser.add_argument(
-        "--train_len", type=int, default=10000, help="Number of training examples"
+        "--train_len", type=int, default=100000, help="Number of training examples"
     )
     parser.add_argument(
         "--val_len", type=int, default=1000, help="Number of validation examples"
@@ -56,22 +56,22 @@ if __name__ == "__main__":
         "--Ty", type=int, default=4, help="Length of the output sequence"
     )
     parser.add_argument(
-        "--decoder_hidden_size", "-nprime", type=int, default=100, help="Size of the hidden layers"
+        "--decoder_hidden_size", "-nprime", type=int, default=1000, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--encoder_hidden_size", "-n", type=int, default=100, help="Size of the hidden layers"
+        "--encoder_hidden_size", "-n", type=int, default=1000, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--embedding_size", "-m", type=int, default=62, help="Size of the embedding"
+        "--embedding_size", "-m", type=int, default=620, help="Size of the embedding"
     )
     parser.add_argument(
-        "--max_out_units", type=int, default=50, help="Size of the hidden layers"
+        "--max_out_units", type=int, default=500, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--vocab_size_en", type=int, default=1000, help="Size of the hidden layers"
+        "--vocab_size_en", type=int, default=30000, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--vocab_size_fr", type=int, default=1000, help="Size of the hidden layers"
+        "--vocab_size_fr", type=int, default=30000, help="Size of the hidden layers"
     )
 
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         ky=args.vocab_size_fr,
         Tx=args.Tx,
         Ty=args.Ty,
-        batch_size=32,
+        batch_size=256,
     )
 
     device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -123,6 +123,7 @@ if __name__ == "__main__":
     fcnn_cfg = dict(
         input_size=args.decoder_hidden_size,
         hidden_sizes=[args.max_out_units],
+        #hidden_sizes=[],
         output_size=len(bow_fr) + 1,
         device=device,
         activation=torch.nn.ReLU(),
