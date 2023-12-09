@@ -13,3 +13,5 @@ isort
 pylint
 pytest
 mosestokenizer
+nltk 
+transformers
