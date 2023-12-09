@@ -77,6 +77,7 @@ class Decoder(nn.Module):
         self.embedding = FCNN(
             input_size = kwargs["rnn"]["hidden_size"],
             output_size= kwargs["embedding"]["embedding_size"],
+            device=kwargs["embedding"]["device"],
         )
         self.output_nn = OutputNetwork(**kwargs["output_nn"])
 
