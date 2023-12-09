@@ -64,11 +64,13 @@ class AlignAndTranslate(nn.Module):
                     self.save_model(self.checkpoint)
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
-            print(f"Epoch: {epoch}, Validation Loss: {val_loss}")
-            print("Sample Translation: ")
-            prediction = self.forward(x[0].unsqueeze(0).to(self.device)).squeeze(0)
-            prediction_idx = torch.argmax(prediction, dim=1)
-            sample = self.sample_translation(x[0], prediction_idx, y[0])
+
+            for i, val_sample in enumerate(val_loader):
+                x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
+                prediction = self.forward(x[0].unsqueeze(0).to(self.device)).squeeze(0)
+                prediction_idx = torch.argmax(prediction, dim=1)
+                sample = self.sample_translation(x[0], prediction_idx, y[0])
+                break
             print(f"Source: {sample[0]}")
             print(f"Prediction: {sample[1]}")
             print(f"Translation: {sample[2]}")
