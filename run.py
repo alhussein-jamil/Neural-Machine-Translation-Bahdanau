@@ -56,22 +56,22 @@ if __name__ == "__main__":
         "--Ty", type=int, default=4, help="Length of the output sequence"
     )
     parser.add_argument(
-        "--decoder_hidden_size", "-nprime", type=int, default=1000, help="Size of the hidden layers"
+        "--decoder_hidden_size", "-nprime", type=int, default=100, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--encoder_hidden_size", "-n", type=int, default=1000, help="Size of the hidden layers"
+        "--encoder_hidden_size", "-n", type=int, default=100, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--embedding_size", "-m", type=int, default=620, help="Size of the embedding"
+        "--embedding_size", "-m", type=int, default=60, help="Size of the embedding"
     )
     parser.add_argument(
-        "--max_out_units", type=int, default=500, help="Size of the hidden layers"
+        "--max_out_units", type=int, default=50, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--vocab_size_en", type=int, default=30000, help="Size of the hidden layers"
+        "--vocab_size_en", type=int, default=5000, help="Size of the hidden layers"
     )
     parser.add_argument(
-        "--vocab_size_fr", type=int, default=30000, help="Size of the hidden layers"
+        "--vocab_size_fr", type=int, default=5000, help="Size of the hidden layers"
     )
 
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         #hidden_sizes=[],
         output_size=len(bow_fr) + 1,
         device=device,
-        activation=torch.nn.ReLU(),
+        activation=torch.nn.Tanh(),
         last_layer_activation=torch.nn.Identity(),
         dropout=0.2,
     )

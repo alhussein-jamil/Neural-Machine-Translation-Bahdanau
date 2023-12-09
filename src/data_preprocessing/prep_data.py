@@ -130,8 +130,39 @@ class to_tensor:
 from collections import Counter
 
 
+def extract_word_frequency_dicho(data):
+    if len(data) == 1:
+        dictionary =  {"en": Counter(data[0]["count_en_words"]), "fr": Counter(data[0]["count_fr_words"])}
+        df_en = pd.DataFrame(dictionary["en"].items(), columns=["word", "freq"])
+        df_fr = pd.DataFrame(dictionary["fr"].items(), columns=["word", "freq"])
+        return df_en, df_fr
+    if len(data) == 0:
+        df_en = pd.DataFrame(columns=["word", "freq"])
+        df_fr = pd.DataFrame(columns=["word", "freq"])
+        return df_en, df_fr
+    middle = len(data) // 2
+
+    left_df_en, left_df_fr= extract_word_frequency_dicho(data.select(range(middle)))
+    right_df_en, right_df_fr = extract_word_frequency_dicho(data.select(range(middle, len(data))))
+
+    #combine the two dataframes and sum the frequencies
+    df_en = pd.concat([left_df_en, right_df_en])
+    df_en = df_en.groupby("word").sum().reset_index()
+    df_fr = pd.concat([left_df_fr, right_df_fr])
+    df_fr = df_fr.groupby("word").sum().reset_index()
+
+
+    df_en.sort_values(by=["freq"], ascending=False, inplace=True)
+    df_fr.sort_values(by=["freq"], ascending=False, inplace=True)
+
+    return df_en, df_fr
+
 def extract_word_frequency(data):
+
+
     word_freq = {"en": Counter(), "fr": Counter()}
+    
+
     for i, x in enumerate(data):
         for lang in ["en", "fr"]:
             word_freq_dict = dict(zip(x["count_{}_words".format(lang)], x["count_{}_freq".format(lang)]))
@@ -235,7 +266,7 @@ def load_data(
         word_count.save_to_disk("processed_data/word_count{}".format(train_len))
     word_count = load_from_disk("processed_data/word_count{}".format(train_len))
 
-
+    print("extracting word frequency")
     if vocab_source == "train":
         if not os.path.exists("data/unigram_freq_en_{}.csv".format(train_len)):
             df_en, df_fr = extract_word_frequency(word_count)
@@ -247,7 +278,7 @@ def load_data(
     else:
         bow_english = pd.read_csv("data/unigram_freq_en_ext.csv")
         bow_french = pd.read_csv("data/unigram_freq_fr_ext.csv")
-
+    print("done extraction")
     bow_english = bow_english[:kx]
     bow_french = bow_french[:ky]
 
