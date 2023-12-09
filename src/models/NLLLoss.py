@@ -43,15 +43,16 @@ class NLLLoss:
         loss.backward()
 
         print(loss.item())
+        return loss.item()
 
 # Exemple d'utilisation à l'extérieur de la classe
 
-probas_tensor = torch.tensor([[0.9, 0.99, 0.9], [0.6, 0.2, 0.1]], requires_grad=True)
+# probas_tensor = torch.tensor([[0.9, 0.99, 0.9], [0.6, 0.2, 0.1]], requires_grad=True)
 
-target = torch.tensor([[1, 0], [2, 1]])
+# target = torch.tensor([[1, 0], [2, 1]])
 
-nll_loss_example = NLLLoss(2,3,2)
-nll_loss_example.calculate_nll(probas_tensor, target)
+# nll_loss_example = NLLLoss(2,3,2)
+# nll_loss_example.calculate_nll(probas_tensor, target)
 
 #Le test avec un tenseur des probas de 1 partout donne bien le résultat attendu qui est NLL=0.
 # probas_tensor = torch.ones(2, 3)
