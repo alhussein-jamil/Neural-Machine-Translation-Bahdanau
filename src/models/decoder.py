@@ -51,6 +51,21 @@ class Maxout(nn.Module):
         return torch.stack([maxout_unit(x) for maxout_unit in self.maxout_unit], dim=1)
 
 
+class OutputNetwork(nn.Module):
+    def __init__(self, embedding_size, max_out_units, hidden_size,vocab_size, device):
+        super().__init__()
+        self.t_nn = FCNN(input_size=embedding_size + 3 * hidden_size, hidden_sizes=[], output_size=2 * max_out_units, device=device)
+        self.output_nn = FCNN(input_size=max_out_units, hidden_sizes=[], output_size=vocab_size, device=device)
+        self.output_size = vocab_size
+
+    def forward(self, s_i, y_i, c_i):
+        t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1))
+        t_even = t_tilde[:, :t_tilde.size(1) // 2]
+        t_odd = t_tilde[:, t_tilde.size(1) // 2:]
+        t = torch.max(t_even, t_odd)
+        return self.output_nn(t)
+
+
 class Decoder(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -58,7 +73,12 @@ class Decoder(nn.Module):
         self.alignment = Alignment(**kwargs["alignment"])
         self.rnn = RNN(**kwargs["rnn"])
         # self.maxout = Maxout(**kwargs["maxout"])
-        self.fcnn = FCNN(**kwargs["fcnn"])
+        # self.fcnn = FCNN(**kwargs["fcnn"])
+        self.embedding = FCNN(
+            input_size = kwargs["rnn"]["hidden_size"],
+            output_size= kwargs["embedding"]["embedding_size"],
+        )
+        self.output_nn = OutputNetwork(**kwargs["output_nn"])
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         """
@@ -71,10 +91,10 @@ class Decoder(nn.Module):
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
         # Initialize output tensor
-        output = torch.zeros(h.size(0), h.size(1), self.fcnn.output_size).to(h.device)
+        output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size).to(h.device)
 
         # Initialize context vector
-        s = torch.zeros(
+        s_i = torch.zeros(
             self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
             h.size(0),
             self.rnn.hidden_size,
@@ -82,19 +102,23 @@ class Decoder(nn.Module):
 
         for i in range(h.size(1)):
             # Compute alignment vector
-            a = self.alignment(s.squeeze(0), h[:, i, :])
+            a = self.alignment(s_i.squeeze(0), h[:, i, :])
             e = F.softmax(a, dim=1)
 
             # Compute context vector
             c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
 
             # Compute output and update context vector
-            y, s = self.rnn(c.unsqueeze(1), s)
+            raw_y_i, s_i = self.rnn(c.unsqueeze(1), s_i)
+            embed_y_i = self.embedding(raw_y_i.squeeze(1))
+            output_network_out = self.output_nn(s_i.view(h.size(0), -1), embed_y_i.squeeze(1), c)
             # maxed_out = self.maxout(y.squeeze(1))
-            fcnn_out = self.fcnn(y.squeeze(1))
+            # fcnn_out = self.fcnn(embed_y_i.squeeze(1))
             # softmaxed = F.softmax(maxed_out, dim=1)
-            softmaxed = F.log_softmax(fcnn_out, dim=1)
-
+            # softmaxed = F.log_softmax(fcnn_out, dim=1)
+            softmaxed = F.log_softmax(output_network_out, dim=1)
             output[:, i, :] = softmaxed
 
         return output
+
+
