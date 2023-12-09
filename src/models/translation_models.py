@@ -7,25 +7,27 @@ from torch import nn
 from models.decoder import Decoder
 from models.encoder import Encoder
 
+from metrics.losses import Loss
 
-class Loss(nn.Module):
-    def __init__(self, loss_fn) -> None:
-        super().__init__()
-        self.loss_fn = loss_fn
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        """
-            x of shape (batch_size, sequence_length, vocab_size)
-            y of shape (batch_size, sequence_length)
-        """
+# class Loss(nn.Module):
+#     def __init__(self, loss_fn) -> None:
+#         super().__init__()
+#         self.loss_fn = loss_fn
 
-        y = y.long()
+#     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+#         """
+#             x of shape (batch_size, sequence_length, vocab_size)
+#             y of shape (batch_size, sequence_length)
+#         """
 
-        y_idx = F.one_hot(y, num_classes=x.shape[-1]).float()
+#         y = y.long()
 
-        losses = self.loss_fn(x, y_idx)
+#         y_idx = F.one_hot(y, num_classes=x.shape[-1]).float()
 
-        return losses.mean()
+#         losses = self.loss_fn(x, y_idx)
+
+#         return losses.mean()
     
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
