@@ -54,6 +54,7 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.input_size = input_size
+        self.rnn_type = type
         network_type = (
             nn.RNN if type == "RNN" else nn.LSTM if type == "LSTM" else nn.GRU
         )
@@ -80,7 +81,7 @@ class RNN(nn.Module):
         # Initialize hidden state
         if h0 is None:
             h0 = torch.zeros(
-                self.num_layers * 1 if not self.rnn.bidirectional else 2,
+                self.num_layers * (2 if self.rnn.bidirectional else 1),
                 x.size(0),
                 self.hidden_size,
             ).to(self.device)
