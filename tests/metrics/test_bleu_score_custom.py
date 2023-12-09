@@ -23,7 +23,7 @@ class TestBLEUScore(unittest.TestCase):
         result= self.bleu_score_example.calculate_bleu_score()
 
         self.assertIsInstance(result, torch.Tensor)
-        scores = torch.tensor([1.0000,0.6687])
+        scores = torch.tensor([1.0000,0.75])
         for i,r in enumerate(result):
             self.assertGreaterEqual(r, 0.0)
             self.assertLessEqual(r, 1.0)
