@@ -2,7 +2,7 @@ import unittest
 import torch
 from torch import nn
 import torch.nn.functional as F
-from models.NLLLoss import NLLLoss
+
 
 class TestNLLLoss(unittest.TestCase):
     def setUp(self):
