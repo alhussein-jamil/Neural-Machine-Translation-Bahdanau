@@ -101,7 +101,7 @@ class AlignAndTranslate(nn.Module):
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output = self.forward(x.to(self.device))
-            loss = self.criterion(output, y) / self.batch_size
+            loss = self.criterion(output, y.to(self.device)) / self.batch_size
             total_loss += loss.item()
         return total_loss / len(val_loader)
 
