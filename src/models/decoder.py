@@ -11,9 +11,12 @@ from models.rnn import RNN
 class Alignment(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
-        self.nn = FCNN(**kwargs)
+        self.hidden_size = kwargs["input_size"] // 3
 
-    def forward(self, s: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
+        self.nn_h = FCNN(input_size = self.hidden_size * 2 , output_size= kwargs["output_size"], device=kwargs["device"])
+        self.nn_s = FCNN(input_size = self.hidden_size  , output_size= kwargs["output_size"], device=kwargs["device"])
+
+    def forward(self, s_emb: torch.Tensor, h_emb: torch.Tensor) -> torch.Tensor:
         """
         Forward pass of the Alignment module.
 
@@ -25,31 +28,9 @@ class Alignment(nn.Module):
             torch.Tensor: Alignment vector.
         """
         # Find the alignment network response
-        a = self.nn(torch.cat((s, h), dim=1))
+        a = F.tanh( s_emb + h_emb )
 
         return a
-
-
-class MaxoutUnit(nn.Module):
-    def __init__(self, input_size, output_size, device):
-        super().__init__()
-        self.neurons = FCNN(input_size, [], output_size, device)
-
-    def forward(self, x):
-        return torch.max(self.neurons(x), dim=1)[0]
-
-
-class Maxout(nn.Module):
-    def __init__(self, input_size, output_size, num_units, device):
-        super().__init__()
-        self.num_units = num_units
-        self.maxout_units = nn.ModuleList()
-        for _ in range(num_units):
-            self.maxout_units.append(MaxoutUnit(input_size, output_size, device))
-
-    def forward(self, x):
-        return torch.stack([maxout_unit(x) for maxout_unit in self.maxout_unit], dim=1)
-
 
 class OutputNetwork(nn.Module):
     def __init__(self, embedding_size, max_out_units, hidden_size, vocab_size, device):
@@ -69,11 +50,13 @@ class OutputNetwork(nn.Module):
         self.output_size = vocab_size
 
     def forward(self, s_i, y_i, c_i):
+        #based on the article Maxout Networks
         t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1))
         t_even = t_tilde[:, : t_tilde.size(1) // 2]
         t_odd = t_tilde[:, t_tilde.size(1) // 2 :]
         t = torch.max(t_even, t_odd)
         return self.output_nn(t)
+    
 
 
 class Decoder(nn.Module):
@@ -82,13 +65,12 @@ class Decoder(nn.Module):
 
         self.alignment = Alignment(**kwargs["alignment"])
         self.rnn = RNN(**kwargs["rnn"])
-        # self.maxout = Maxout(**kwargs["maxout"])
-        # self.fcnn = FCNN(**kwargs["fcnn"])
         self.embedding = FCNN(
             input_size=kwargs["rnn"]["hidden_size"],
             output_size=kwargs["embedding"]["embedding_size"],
             device=kwargs["embedding"]["device"],
         )
+        self.hidden_size = kwargs["rnn"]["hidden_size"]
         self.output_nn = OutputNetwork(**kwargs["output_nn"])
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
@@ -111,9 +93,14 @@ class Decoder(nn.Module):
             self.rnn.hidden_size,
         ).to(h.device)
 
+        h_emb = self.alignment.nn_h(h)
+
         for i in range(h.size(1)):
+            s_i_emb = self.alignment.nn_s(s_i.view(h.size(0), -1))
+     
             # Compute alignment vector
-            a = self.alignment(s_i.squeeze(0), h[:, i, :])
+            a = self.alignment(s_i_emb, h_emb[:, i, :])
+ 
 
             e = F.softmax(a, dim=1)
 

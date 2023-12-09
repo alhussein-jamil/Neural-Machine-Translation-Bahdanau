@@ -37,7 +37,7 @@ class AlignAndTranslate(nn.Module):
         training_config = kwargs.get("training", {})
 
         self.criterion = training_config.get("criterion", Loss(nn.CrossEntropyLoss(reduction="sum")))
-        self.optimizer = training_config.get("optimizer", torch.optim.Adam(self.parameters(), lr=1e-5))
+        self.optimizer = training_config.get("optimizer", torch.optim.Adam(self.parameters(), lr=1e-4))
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
         self.batch_size = training_config.get("batch_size", 32)

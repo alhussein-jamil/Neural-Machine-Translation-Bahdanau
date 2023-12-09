@@ -7,3 +7,4 @@ data/t*
 *processed_data/*
 *.pth
 *.ipynb
+*0.csv
