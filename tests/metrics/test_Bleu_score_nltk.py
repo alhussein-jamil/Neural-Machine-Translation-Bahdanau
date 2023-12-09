@@ -1,9 +1,6 @@
 import unittest
 import torch
-import torch.nn.functional as F
-import nltk 
-import numpy as np
-from models.BLEUscoreNLTK import BLEUScoreNLTK
+from metrics.bleu_nltk import BLEUScoreNLTK
 
 class TestBLEUScoreNLTK(unittest.TestCase):
     def setUp(self):
@@ -26,9 +23,13 @@ class TestBLEUScoreNLTK(unittest.TestCase):
 
         # Ajouter des assertions en fonction des résultats attendus
         # Par exemple, vérifier si le score BLEU est dans une plage acceptable
-        self.assertGreaterEqual(result, 0.0)
-        self.assertLessEqual(result, 100.0)
-
+        self.assertIsInstance(result, torch.Tensor)
+        scores = torch.tensor([1.0000,0.6687])
+        for i,r in enumerate(result):
+            self.assertGreaterEqual(r, 0.0)
+            self.assertLessEqual(r, 1.0)
+            self.assertAlmostEqual(r.item(), scores[i].item(), places=4)
+            
 
 # Créer un test runner et exécuter les tests
 runner = unittest.TextTestRunner()
