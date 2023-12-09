@@ -50,7 +50,7 @@ if __name__ == "__main__":
     )
     
     alignment_cfg = dict(
-        input_size=args.hidden_size * 2 + args.hidden_size,
+        input_size=args.hidden_size * 3 ,
         hidden_sizes=[],
         output_size=args.Ty,
         device=device,
