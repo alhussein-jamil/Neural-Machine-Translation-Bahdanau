@@ -32,6 +32,7 @@ class BLEUScoreNLTK:
             BLEUscore = nltk.translate.bleu_score.sentence_bleu([reference_list], candidate_list)
             self.bleu_scores.append(BLEUscore)
 
+
         print("BLEU SCORE =", np.mean(self.bleu_scores)*100,"%")
         return np.mean(self.bleu_scores)*100
 
