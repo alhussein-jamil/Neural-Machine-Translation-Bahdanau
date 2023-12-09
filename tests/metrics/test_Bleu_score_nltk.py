@@ -1,6 +1,6 @@
 import unittest
 import torch
-from metrics.bleu_nltk import BLEUScoreNLTK
+from metrics.bleu import BLEUScoreNLTK
 
 class TestBLEUScoreNLTK(unittest.TestCase):
     def setUp(self):

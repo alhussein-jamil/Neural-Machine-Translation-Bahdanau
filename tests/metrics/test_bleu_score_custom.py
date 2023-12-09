@@ -1,6 +1,6 @@
 import unittest
 import torch
-from metrics.Bleuscore import BLEUScore
+from metrics.bleu import BLEUScore
  
 class TestBLEUScore(unittest.TestCase):
     def setUp(self):

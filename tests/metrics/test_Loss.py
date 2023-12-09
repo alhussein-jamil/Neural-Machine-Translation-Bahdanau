@@ -2,7 +2,7 @@ import unittest
 import torch
 from torch import nn
 import torch.nn.functional as F
-from metrics.Loss import Loss
+from metrics.losses import Loss
 
 class TestLoss(unittest.TestCase):
     def setUp(self):
