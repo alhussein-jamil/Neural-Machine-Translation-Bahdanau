@@ -1,6 +1,8 @@
 import collections
+
 import nltk
-import torch 
+import torch
+
 
 class BLEUScoreNLTK:
     """
@@ -12,7 +14,6 @@ class BLEUScoreNLTK:
     """
 
     def __init__(self, reference_tensor, candidate_tensor):
-        
         self.reference_tensor = reference_tensor
         self.candidate_tensor = candidate_tensor
         self.bleu_scores = []
@@ -23,7 +24,6 @@ class BLEUScoreNLTK:
         """
 
         for reference_sequence, candidate_sequence in zip(self.reference_tensor, self.candidate_tensor):
-
             reference_list = list(reference_sequence.numpy())
             candidate_list = list(candidate_sequence.numpy())
 
@@ -32,10 +32,10 @@ class BLEUScoreNLTK:
             self.bleu_scores.append(BLEUscore)
 
         return torch.tensor(self.bleu_scores)
-    
+
 
 class BLEUScore:
-    
+
     """
     Classe pour calculer le score BLEU.
 
@@ -45,10 +45,9 @@ class BLEUScore:
     """
 
     def __init__(self, reference_tensor, candidate_tensor, n=2):
-        
         self.reference_tensor = reference_tensor
         self.candidate_tensor = candidate_tensor
-        self.n=n # nombre de n-grammes
+        self.n = n  # nombre de n-grammes
         self.bleu_scores = []
 
     def calculate_bleu_score(self):
@@ -56,14 +55,12 @@ class BLEUScore:
         Calcule le score BLEU entre les références et les candidatures pour chaque paire dans le même ordre.
         """
         for reference_sequence, candidate_sequence in zip(self.reference_tensor, self.candidate_tensor):
-
             reference_list = list(reference_sequence.numpy())
             candidate_list = list(candidate_sequence.numpy())
 
-
-           # Calcul des n-grammes pour la référence et le candidat
-            reference_ngrams = [tuple(reference_list[i:i + self.n]) for i in range(len(reference_list) - self.n + 1)]
-            candidate_ngrams = [tuple(candidate_list[i:i + self.n]) for i in range(len(candidate_list) - self.n + 1)]
+            # Calcul des n-grammes pour la référence et le candidat
+            reference_ngrams = [tuple(reference_list[i : i + self.n]) for i in range(len(reference_list) - self.n + 1)]
+            candidate_ngrams = [tuple(candidate_list[i : i + self.n]) for i in range(len(candidate_list) - self.n + 1)]
 
             # Comptage des n-grammes dans la référence
             reference_ngram_counts = collections.Counter(reference_ngrams)
@@ -75,5 +72,5 @@ class BLEUScore:
             BLEUscore = matching_ngram_counts / len(candidate_ngrams)
 
             self.bleu_scores.append(BLEUscore)
-            
+
         return torch.tensor(self.bleu_scores)

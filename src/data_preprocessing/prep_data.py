@@ -39,6 +39,7 @@ class TokenizerWrapper:
             "tokenized_fr": self.tokenizer_fr.tokenize(preprocessed_fr),
         }
 
+
 class toWordCount:
     """
     Transform class to convert tokenized sentences to corresponding word IDs.
@@ -46,6 +47,7 @@ class toWordCount:
 
     def __init__(self, cont):
         self.cont = cont
+
     def __call__(self, tokenized):
         count_en = self.cont()
         count_fr = self.cont()
@@ -58,8 +60,7 @@ class toWordCount:
             "count_fr_words": list(count_fr.keys()),
             "count_fr_freq": list(count_fr.values()),
         }
-    
-            
+
 
 class toIdTransform:
     """
@@ -78,14 +79,8 @@ class toIdTransform:
         Convert tokenized sentences to word IDs.
         """
         return {
-            "ids_en": [
-                self.word_to_id_en.get(token, len(self.most_frequent_words_en) - 1)
-                for token in tokenized["tokenized_en"]
-            ],
-            "ids_fr": [
-                self.word_to_id_fr.get(token, len(self.most_frequent_words_fr) - 1)
-                for token in tokenized["tokenized_fr"]
-            ],
+            "ids_en": [self.word_to_id_en.get(token, len(self.most_frequent_words_en) - 1) for token in tokenized["tokenized_en"]],
+            "ids_fr": [self.word_to_id_fr.get(token, len(self.most_frequent_words_fr) - 1) for token in tokenized["tokenized_fr"]],
         }
 
 
@@ -96,9 +91,7 @@ class TranslationDataset(Dataset):
         self.types = ["idx", "sentences"]
 
     def __len__(self):
-        return len(
-            self.data["english"]["idx"]
-        )  # Assuming all language and data types have the same length
+        return len(self.data["english"]["idx"])  # Assuming all language and data types have the same length
 
     def __getitem__(self, index):
         sample = {}
@@ -132,7 +125,10 @@ from collections import Counter
 
 def extract_word_frequency_dicho(data):
     if len(data) == 1:
-        dictionary =  {"en": Counter(data[0]["count_en_words"]), "fr": Counter(data[0]["count_fr_words"])}
+        dictionary = {
+            "en": Counter(data[0]["count_en_words"]),
+            "fr": Counter(data[0]["count_fr_words"]),
+        }
         df_en = pd.DataFrame(dictionary["en"].items(), columns=["word", "freq"])
         df_fr = pd.DataFrame(dictionary["fr"].items(), columns=["word", "freq"])
         return df_en, df_fr
@@ -142,30 +138,32 @@ def extract_word_frequency_dicho(data):
         return df_en, df_fr
     middle = len(data) // 2
 
-    left_df_en, left_df_fr= extract_word_frequency_dicho(data.select(range(middle)))
+    left_df_en, left_df_fr = extract_word_frequency_dicho(data.select(range(middle)))
     right_df_en, right_df_fr = extract_word_frequency_dicho(data.select(range(middle, len(data))))
 
-    #combine the two dataframes and sum the frequencies
+    # combine the two dataframes and sum the frequencies
     df_en = pd.concat([left_df_en, right_df_en])
     df_en = df_en.groupby("word").sum().reset_index()
     df_fr = pd.concat([left_df_fr, right_df_fr])
     df_fr = df_fr.groupby("word").sum().reset_index()
-
 
     df_en.sort_values(by=["freq"], ascending=False, inplace=True)
     df_fr.sort_values(by=["freq"], ascending=False, inplace=True)
 
     return df_en, df_fr
 
+
 def extract_word_frequency(data):
-
-
     word_freq = {"en": Counter(), "fr": Counter()}
-    
 
     for i, x in enumerate(data):
         for lang in ["en", "fr"]:
-            word_freq_dict = dict(zip(x["count_{}_words".format(lang)], x["count_{}_freq".format(lang)]))
+            word_freq_dict = dict(
+                zip(
+                    x["count_{}_words".format(lang)],
+                    x["count_{}_freq".format(lang)],
+                )
+            )
             word_freq[lang].update(word_freq_dict)
         print("Processed {} / {} samples".format(i + 1, len(data)), end="\r")
     df_en = pd.DataFrame(word_freq["en"].items(), columns=["word", "freq"])
@@ -196,16 +194,8 @@ def load_data(
     Load and preprocess data for training and validation.
     """
 
-    mt_en = (
-        MosesTokenizer(lang="en")
-        if tokenizer == "Moses"
-        else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
-    )
-    mt_fr = (
-        MosesTokenizer(lang="fr")
-        if tokenizer == "Moses"
-        else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
-    )
+    mt_en = MosesTokenizer(lang="en") if tokenizer == "Moses" else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
+    mt_fr = MosesTokenizer(lang="fr") if tokenizer == "Moses" else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
 
     # Load WMT14 dataset
     wmt14 = load_dataset("wmt14", "fr-en", data_dir="data/")
@@ -214,7 +204,7 @@ def load_data(
     train_data = wmt14["train"]
     val_data = wmt14["validation"]
 
-    #shuffle data
+    # shuffle data
     train_data = train_data.shuffle(seed=42)
     val_data = val_data.shuffle(seed=42)
 
@@ -238,9 +228,7 @@ def load_data(
             num_proc=n_processors,
             remove_columns=["translation"],
         )
-        tokenized_train_data.save_to_disk(
-            "processed_data/tokenized_train_data{}".format(train_len)
-        )
+        tokenized_train_data.save_to_disk("processed_data/tokenized_train_data{}".format(train_len))
 
     # Tokenize and save validation data if not already done
     if not os.path.exists("processed_data/tokenized_val_data{}".format(val_len)):
@@ -250,16 +238,10 @@ def load_data(
             num_proc=n_processors,
             remove_columns=["translation"],
         )
-        tokenized_val_data.save_to_disk(
-            "processed_data/tokenized_val_data{}".format(val_len)
-        )
+        tokenized_val_data.save_to_disk("processed_data/tokenized_val_data{}".format(val_len))
 
-    tokenized_train_data = load_from_disk(
-        "processed_data/tokenized_train_data{}".format(train_len)
-    )
-    tokenized_val_data = load_from_disk(
-        "processed_data/tokenized_val_data{}".format(val_len)
-    )
+    tokenized_train_data = load_from_disk("processed_data/tokenized_train_data{}".format(train_len))
+    tokenized_val_data = load_from_disk("processed_data/tokenized_val_data{}".format(val_len))
 
     if not os.path.exists("processed_data/word_count{}".format(train_len)):
         word_count = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
@@ -274,7 +256,7 @@ def load_data(
             df_fr.to_csv("data/unigram_freq_fr_{}.csv".format(train_len), index=False)
         df_en = pd.read_csv("data/unigram_freq_en_{}.csv".format(train_len))
         df_fr = pd.read_csv("data/unigram_freq_fr_{}.csv".format(train_len))
-        bow_english, bow_french = df_en , df_fr
+        bow_english, bow_french = df_en, df_fr
     else:
         bow_english = pd.read_csv("data/unigram_freq_en_ext.csv")
         bow_french = pd.read_csv("data/unigram_freq_fr_ext.csv")
@@ -285,12 +267,8 @@ def load_data(
     # Get most frequent English and French words
     most_frequent_english_words = bow_english["word"].apply(lambda x: str(x)).tolist()
     most_frequent_french_words = bow_french["word"].apply(lambda x: str(x)).tolist()
-    tokenized_most_frequent_english_words = mt_en.tokenize(
-        " ".join(most_frequent_english_words)
-    )[: kx - 1]
-    tokenized_most_frequent_french_words = mt_fr.tokenize(
-        " ".join(most_frequent_french_words)
-    )[: ky - 1]
+    tokenized_most_frequent_english_words = mt_en.tokenize(" ".join(most_frequent_english_words))[: kx - 1]
+    tokenized_most_frequent_french_words = mt_fr.tokenize(" ".join(most_frequent_french_words))[: ky - 1]
     tokenized_most_frequent_english_words.append("")
     tokenized_most_frequent_french_words.append("")
 
@@ -302,23 +280,15 @@ def load_data(
 
     # Convert tokenized sentences to word IDs and save train data if not already done
     if not os.path.exists("processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)):
-        tokenized_train_data = tokenized_train_data.map(
-            to_id_transform, batched=False, num_proc=n_processors
-        )
-        tokenized_train_data.save_to_disk(
-            "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)
-        )
+        tokenized_train_data = tokenized_train_data.map(to_id_transform, batched=False, num_proc=n_processors)
+        tokenized_train_data.save_to_disk("processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
 
     # Convert tokenized sentences to word IDs and save validation data if not already done
     if not os.path.exists("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky)):
-        tokenized_val_data = tokenized_val_data.map(
-            to_id_transform, batched=False, num_proc=n_processors
-        )
+        tokenized_val_data = tokenized_val_data.map(to_id_transform, batched=False, num_proc=n_processors)
         tokenized_val_data.save_to_disk("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
 
-    tokenized_train_data = load_from_disk(
-        "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)
-    )
+    tokenized_train_data = load_from_disk("processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
     tokenized_val_data = load_from_disk("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
 
     # Helper function to pad sequences to a specified length
@@ -329,12 +299,8 @@ def load_data(
             return x[:length]
 
     # Initialize tensors for train and validation data
-    idx_train_tensor_en = torch.zeros(
-        (len(tokenized_train_data), Tx), dtype=torch.int16
-    )
-    idx_train_tensor_fr = torch.zeros(
-        (len(tokenized_train_data), Ty), dtype=torch.int16
-    )
+    idx_train_tensor_en = torch.zeros((len(tokenized_train_data), Tx), dtype=torch.int16)
+    idx_train_tensor_fr = torch.zeros((len(tokenized_train_data), Ty), dtype=torch.int16)
     idx_val_tensor_en = torch.zeros((len(tokenized_val_data), Tx), dtype=torch.int16)
     idx_val_tensor_fr = torch.zeros((len(tokenized_val_data), Ty), dtype=torch.int16)
 
@@ -349,18 +315,10 @@ def load_data(
         idx_val_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
 
     # Extract English and French sentences for train and validation data
-    train_english_sentences = [
-        train_data[i]["translation"]["en"] for i in range(len(train_data))
-    ]
-    train_french_sentences = [
-        train_data[i]["translation"]["fr"] for i in range(len(train_data))
-    ]
-    val_english_sentences = [
-        val_data[i]["translation"]["en"] for i in range(len(val_data))
-    ]
-    val_french_sentences = [
-        val_data[i]["translation"]["fr"] for i in range(len(val_data))
-    ]
+    train_english_sentences = [train_data[i]["translation"]["en"] for i in range(len(train_data))]
+    train_french_sentences = [train_data[i]["translation"]["fr"] for i in range(len(train_data))]
+    val_english_sentences = [val_data[i]["translation"]["en"] for i in range(len(val_data))]
+    val_french_sentences = [val_data[i]["translation"]["fr"] for i in range(len(val_data))]
 
     # Organize data into a dictionary
     data = dict(
@@ -380,12 +338,8 @@ def load_data(
     train_dataset = TranslationDataset(data["train"])
     val_dataset = TranslationDataset(data["val"])
 
-    train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True
-    )
-    val_dataloader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True
-    )
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
     return (
         (data["train"], train_dataloader),
         (data["val"], val_dataloader),

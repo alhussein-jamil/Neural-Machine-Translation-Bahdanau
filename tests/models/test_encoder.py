@@ -29,9 +29,7 @@ class TestEncoder(unittest.TestCase):
 
         # Check that the output and hidden state have the expected dimensions
         self.assertEqual(rnn_output.shape, (batch_size, sequence_length, 20))
-        self.assertEqual(
-            rnn_hidden.shape, (2 * encoder.rnn.num_layers, batch_size, 10)
-        )  # (2 * num_layers, batch_size, hidden_size)
+        self.assertEqual(rnn_hidden.shape, (2 * encoder.rnn.num_layers, batch_size, 10))  # (2 * num_layers, batch_size, hidden_size)
 
 
 if __name__ == "__main__":

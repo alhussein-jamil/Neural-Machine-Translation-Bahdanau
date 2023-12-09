@@ -6,7 +6,8 @@ from matplotlib import pyplot as plt
 
 
 def plot_alignment(
-    data: Dict[str, Tuple[List[str], List[str], np.ndarray]], save_path: str = None
+    data: Dict[str, Tuple[List[str], List[str], np.ndarray]],
+    save_path: str = None,
 ) -> None:
     """
     Plot alignment for each pair of phrases.

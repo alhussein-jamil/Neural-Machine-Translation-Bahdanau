@@ -1,6 +1,9 @@
 import unittest
+
 import torch
+
 from metrics.bleu import BLEUScoreNLTK
+
 
 class TestBLEUScoreNLTK(unittest.TestCase):
     def setUp(self):
@@ -13,8 +16,14 @@ class TestBLEUScoreNLTK(unittest.TestCase):
 
     def test_initialization(self):
         # Vérifier si les attributs sont correctement initialisés
-        self.assertEqual(self.bleu_score_nltk.reference_tensor.tolist(), self.reference_tensor.tolist())
-        self.assertEqual(self.bleu_score_nltk.candidate_tensor.tolist(), self.candidate_tensor.tolist())
+        self.assertEqual(
+            self.bleu_score_nltk.reference_tensor.tolist(),
+            self.reference_tensor.tolist(),
+        )
+        self.assertEqual(
+            self.bleu_score_nltk.candidate_tensor.tolist(),
+            self.candidate_tensor.tolist(),
+        )
         self.assertEqual(self.bleu_score_nltk.bleu_scores, [])
 
     def test_bleu_score_calculation(self):
@@ -24,12 +33,12 @@ class TestBLEUScoreNLTK(unittest.TestCase):
         # Ajouter des assertions en fonction des résultats attendus
         # Par exemple, vérifier si le score BLEU est dans une plage acceptable
         self.assertIsInstance(result, torch.Tensor)
-        scores = torch.tensor([1.0000,0.6687])
-        for i,r in enumerate(result):
+        scores = torch.tensor([1.0000, 0.6687])
+        for i, r in enumerate(result):
             self.assertGreaterEqual(r, 0.0)
             self.assertLessEqual(r, 1.0)
             self.assertAlmostEqual(r.item(), scores[i].item(), places=4)
-            
+
 
 # Créer un test runner et exécuter les tests
 runner = unittest.TextTestRunner()

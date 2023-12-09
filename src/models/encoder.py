@@ -1,9 +1,9 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.rnn import RNN
 from models.fcnn import FCNN
+from models.rnn import RNN
+
 
 class Encoder(nn.Module):
     def __init__(self, **kwargs):
@@ -39,12 +39,10 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         # Appliquer le one-hot coding
-        v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size).float()   
+        v_one_hot = F.one_hot(x.long(), num_classes=self.vocab_size).float()
 
         # Appliquer l'embedding
-        embedded = self.embedding(v_one_hot.view(-1, self.vocab_size)).view(
-            v_one_hot.shape[0], v_one_hot.shape[1], -1
-        )
+        embedded = self.embedding(v_one_hot.view(-1, self.vocab_size)).view(v_one_hot.shape[0], v_one_hot.shape[1], -1)
         # Appeler la classe RNN pour obtenir output et hidden
         rnn_output, rnn_hidden = self.rnn(embedded)
 

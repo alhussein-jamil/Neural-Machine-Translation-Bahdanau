@@ -4,11 +4,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from metrics.losses import Loss
 from models.decoder import Decoder
 from models.encoder import Encoder
-
-from metrics.losses import Loss
-
 
 # class Loss(nn.Module):
 #     def __init__(self, loss_fn) -> None:
@@ -28,7 +26,8 @@ from metrics.losses import Loss
 #         losses = self.loss_fn(x, y_idx)
 
 #         return losses.mean()
-    
+
+
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -38,9 +37,7 @@ class AlignAndTranslate(nn.Module):
         training_config = kwargs.get("training", {})
 
         self.criterion = training_config.get("criterion", Loss(nn.CrossEntropyLoss(reduction="sum")))
-        self.optimizer = training_config.get(
-            "optimizer", torch.optim.Adam(self.parameters(), lr=2e-3)
-        )
+        self.optimizer = training_config.get("optimizer", torch.optim.Adam(self.parameters(), lr=1e-5))
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
         self.batch_size = training_config.get("batch_size", 32)
@@ -73,7 +70,10 @@ class AlignAndTranslate(nn.Module):
     def train(self, train_loader, val_loader) -> None:
         for epoch in range(self.epochs):
             for i, train_sample in enumerate(train_loader):
-                x, y = train_sample["english"]["idx"], train_sample["french"]["idx"]
+                x, y = (
+                    train_sample["english"]["idx"],
+                    train_sample["french"]["idx"],
+                )
                 x = x.to(self.device)
                 y = y.to(self.device)
                 loss = self.train_step(x, y)
@@ -87,8 +87,8 @@ class AlignAndTranslate(nn.Module):
             for i, val_sample in enumerate(val_loader):
                 x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
                 prediction = self.forward(x[0].unsqueeze(0).to(self.device)).squeeze(0)
-    
                 prediction_idx = torch.argmax(prediction, dim=1)
+                print(prediction_idx)
                 sample = self.sample_translation(x[0], prediction_idx, y[0])
                 break
             print(f"Source: {sample[0]}")

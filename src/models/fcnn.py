@@ -30,9 +30,7 @@ class FCNN(nn.Module):
         self.fc.append(
             nn.Linear(
                 self.input_size,
-                self.hidden_sizes[0]
-                if len(self.hidden_sizes) > 0
-                else self.output_size,
+                self.hidden_sizes[0] if len(self.hidden_sizes) > 0 else self.output_size,
             )
         )
 

@@ -54,9 +54,7 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.input_size = input_size
-        network_type = (
-            nn.RNN if type == "RNN" else nn.LSTM if type == "LSTM" else nn.GRU
-        )
+        network_type = nn.RNN if type == "RNN" else nn.LSTM if type == "LSTM" else nn.GRU
         self.rnn = network_type(
             input_size,
             hidden_size,

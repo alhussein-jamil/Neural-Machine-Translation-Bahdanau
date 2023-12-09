@@ -42,11 +42,7 @@ class TestRNN(unittest.TestCase):
         # Check if the RNN layer is created with the correct parameters
         self.assertIsInstance(
             self.model.rnn,
-            nn.RNN
-            if self.type == "RNN"
-            else nn.LSTM
-            if self.type == "LSTM"
-            else nn.GRU,
+            nn.RNN if self.type == "RNN" else nn.LSTM if self.type == "LSTM" else nn.GRU,
         )
         self.assertEqual(self.model.rnn.input_size, self.input_size)
         self.assertEqual(self.model.rnn.hidden_size, self.hidden_size)
@@ -61,7 +57,8 @@ class TestRNN(unittest.TestCase):
         output_tensor, hidden_tensor = self.model(input_tensor)
         self.assertEqual(output_tensor.shape, torch.Size([32, 5, self.hidden_size]))
         self.assertEqual(
-            hidden_tensor.shape, torch.Size([self.num_layers, 32, self.hidden_size])
+            hidden_tensor.shape,
+            torch.Size([self.num_layers, 32, self.hidden_size]),
         )
 
 

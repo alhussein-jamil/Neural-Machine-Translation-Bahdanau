@@ -1,2 +1,2 @@
-from .bleu import * 
+from .bleu import *
 from .losses import *

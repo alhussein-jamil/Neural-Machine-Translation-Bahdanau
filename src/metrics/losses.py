@@ -1,6 +1,7 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
 
 class Loss(nn.Module):
     def __init__(self, loss_fn) -> None:
@@ -21,4 +22,3 @@ class Loss(nn.Module):
         else:
             raise ValueError("Unsupported loss function type")
         return losses.mean()
-    
