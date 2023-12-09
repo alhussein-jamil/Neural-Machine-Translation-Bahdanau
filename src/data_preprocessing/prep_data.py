@@ -291,8 +291,8 @@ def load_data(
     tokenized_most_frequent_french_words = mt_fr.tokenize(
         " ".join(most_frequent_french_words)
     )[: ky - 1]
-    tokenized_most_frequent_english_words.append("<unk>")
-    tokenized_most_frequent_french_words.append("<unk>")
+    tokenized_most_frequent_english_words.append("")
+    tokenized_most_frequent_french_words.append("")
 
     to_id_transform = toIdTransform(
         tokenized_most_frequent_english_words,
@@ -301,25 +301,25 @@ def load_data(
     )
 
     # Convert tokenized sentences to word IDs and save train data if not already done
-    if not os.path.exists("processed_data/id_train_data{}".format(train_len)):
+    if not os.path.exists("processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)):
         tokenized_train_data = tokenized_train_data.map(
             to_id_transform, batched=False, num_proc=n_processors
         )
         tokenized_train_data.save_to_disk(
-            "processed_data/id_train_data{}".format(train_len)
+            "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)
         )
 
     # Convert tokenized sentences to word IDs and save validation data if not already done
-    if not os.path.exists("processed_data/id_val_data{}".format(val_len)):
+    if not os.path.exists("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky)):
         tokenized_val_data = tokenized_val_data.map(
             to_id_transform, batched=False, num_proc=n_processors
         )
-        tokenized_val_data.save_to_disk("processed_data/id_val_data{}".format(val_len))
+        tokenized_val_data.save_to_disk("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
 
     tokenized_train_data = load_from_disk(
-        "processed_data/id_train_data{}".format(train_len)
+        "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)
     )
-    tokenized_val_data = load_from_disk("processed_data/id_val_data{}".format(val_len))
+    tokenized_val_data = load_from_disk("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
 
     # Helper function to pad sequences to a specified length
     def pad_to_length(x, length, pad_value):

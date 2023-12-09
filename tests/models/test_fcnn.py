@@ -20,8 +20,8 @@ class TestFCNN(unittest.TestCase):
         # Create an instance of the FCNN model
         self.model = FCNN(
             self.input_size,
-            self.hidden_sizes,
             self.output_size,
+            self.hidden_sizes,
             self.device,
             self.activation,
             self.last_layer_activation,
