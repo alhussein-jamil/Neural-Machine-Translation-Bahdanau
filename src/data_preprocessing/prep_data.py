@@ -183,6 +183,10 @@ def load_data(
     train_data = wmt14["train"]
     val_data = wmt14["validation"]
 
+    #shuffle data
+    train_data = train_data.shuffle(seed=42)
+    val_data = val_data.shuffle(seed=42)
+
     # Select a subset of data if specified
     if train_len is not None:
         train_data = train_data.select(range(train_len))
