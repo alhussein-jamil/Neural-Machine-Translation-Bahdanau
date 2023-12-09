@@ -19,6 +19,7 @@ class NLLLoss:
         self.batch_size = batch_size
         self.Tx = Tx
         self.Ty = Ty
+        
 
     def calculate_nll(self, probas_tensor, target):
         # Créer un tenseur de probabilités (log-probabilités pour simplifier ici)
