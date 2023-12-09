@@ -93,7 +93,7 @@ class Decoder(nn.Module):
             # maxed_out = self.maxout(y.squeeze(1))
             fcnn_out = self.fcnn(y.squeeze(1))
             # softmaxed = F.softmax(maxed_out, dim=1)
-            softmaxed = F.softmax(fcnn_out, dim=1)
+            softmaxed = F.log_softmax(fcnn_out, dim=1)
 
             output[:, i, :] = softmaxed
 
