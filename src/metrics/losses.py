@@ -20,7 +20,5 @@ class Loss(nn.Module):
             losses = self.loss_fn(x, y)
         else:
             raise ValueError("Unsupported loss function type")
-
         return losses.mean()
     
-#Le test avec un tenseur des probas de 1 partout donne bien le résultat attendu qui est NLL=0 : Modèle parfait

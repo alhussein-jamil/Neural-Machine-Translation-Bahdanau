@@ -33,7 +33,7 @@ result = runner.run(unittest.makeSuite(TestLoss))
 class TestNLLLoss(unittest.TestCase):
     def setUp(self):
         # Créer des exemples de tenseurs pour les tests
-        self.x = torch.randn(2, 5, 10)  # Exemple de tenseur x
+        self.x = torch.rand(2, 5, 10)  # Exemple de tenseur x
         self.y = torch.randint(0, 10, (2, 5))  # Exemple de tenseur y
         
         # Créer une instance de la classe Loss pour les tests
