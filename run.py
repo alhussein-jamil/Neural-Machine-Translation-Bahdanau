@@ -17,10 +17,10 @@ if __name__ == "__main__":
         "--val_len", type=int, default=3000, help="Number of validation examples"
     )
     parser.add_argument(
-        "--Tx", type=int, default=30, help="Length of the input sequence"
+        "--Tx", type=int, default=5, help="Length of the input sequence"
     )
     parser.add_argument(
-        "--Ty", type=int, default=30, help="Length of the output sequence"
+        "--Ty", type=int, default=5, help="Length of the output sequence"
     )
     parser.add_argument(
         "--decoder_hidden_size", "-nprime", type=int, default=1000, help="Size of the hidden layers"
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         ky=args.vocab_size_fr,
         Tx=args.Tx,
         Ty=args.Ty,
-        batch_size=256,
+        batch_size=32,
     )
 
     device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         device=device,
         activation=torch.nn.ReLU(),
         last_layer_activation=torch.nn.Tanh(),
-        dropout=0.2,
+        dropout=0,
     )
 
     maxout_cfg = dict(
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         num_units=len(bow_fr) + 1,
         device=device,
     )
-    fcnn_cfg = dict(
+    decoder_fcnn_cfg = dict(
         input_size=args.decoder_hidden_size,
         hidden_sizes=[args.max_out_units],
         #hidden_sizes=[],
@@ -128,14 +128,14 @@ if __name__ == "__main__":
         device=device,
         activation=torch.nn.Tanh(),
         last_layer_activation=torch.nn.Identity(),
-        dropout=0.2,
+        dropout=0,
     )
 
     config_decoder = dict(
         alignment=alignment_cfg,
         rnn=config_rnn_decoder,
         maxout=maxout_cfg,
-        fcnn=fcnn_cfg,
+        fcnn=decoder_fcnn_cfg,
     )
 
     config_encoder = dict(

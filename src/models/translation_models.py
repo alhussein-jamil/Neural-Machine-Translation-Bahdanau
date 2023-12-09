@@ -8,6 +8,25 @@ from models.decoder import Decoder
 from models.encoder import Encoder
 
 
+class Loss(nn.Module):
+    def __init__(self, loss_fn) -> None:
+        super().__init__()
+        self.loss_fn = loss_fn
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """
+            x of shape (batch_size, sequence_length, vocab_size)
+            y of shape (batch_size, sequence_length)
+        """
+
+        y = y.long()
+
+        y_idx = F.one_hot(y, num_classes=x.shape[-1]).float()
+
+        losses = self.loss_fn(x, y_idx)
+
+        return losses.mean()
+    
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -16,7 +35,7 @@ class AlignAndTranslate(nn.Module):
 
         training_config = kwargs.get("training", {})
 
-        self.criterion = training_config.get("criterion", nn.NLLLoss()) 
+        self.criterion = training_config.get("criterion", Loss(nn.CrossEntropyLoss(reduction="sum")))
         self.optimizer = training_config.get(
             "optimizer", torch.optim.Adam(self.parameters(), lr=2e-3)
         )
@@ -40,11 +59,6 @@ class AlignAndTranslate(nn.Module):
     def train_step(self, x: torch.Tensor, y: torch.Tensor) -> float:
         self.optimizer.zero_grad()
         output = self.forward(x.to(self.device))
-
-        # y_idx = F.one_hot(
-        #     y.to(self.device).long(), num_classes=self.output_vocab_size
-        # ).float()
-        
         loss = self.criterion(output, y) / self.batch_size
         loss.backward()
         self.optimizer.step()
@@ -58,6 +72,8 @@ class AlignAndTranslate(nn.Module):
         for epoch in range(self.epochs):
             for i, train_sample in enumerate(train_loader):
                 x, y = train_sample["english"]["idx"], train_sample["french"]["idx"]
+                x = x.to(self.device)
+                y = y.to(self.device)
                 loss = self.train_step(x, y)
                 if i % self.print_every == 0:
                     print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}")
@@ -85,10 +101,7 @@ class AlignAndTranslate(nn.Module):
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output = self.forward(x.to(self.device))
-            y_idx = F.one_hot(
-                y.to(self.device).long(), num_classes=self.output_vocab_size
-            ).float()
-            loss = self.criterion(output, y_idx)
+            loss = self.criterion(output, y) / self.batch_size
             total_loss += loss.item()
         return total_loss / len(val_loader)
 
