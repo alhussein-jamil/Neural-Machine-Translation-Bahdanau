@@ -14,25 +14,22 @@ if __name__ == "__main__":
             "--train_len", type=int, default=100000, help="Number of training examples"
     )
     parser.add_argument(
-        "--val_len", type=int, default=3000, help="Number of validation examples"
+        "--val_len", type=int, default=None, help="Number of validation examples"
     )
     parser.add_argument(
-        "--Tx", type=int, default=5, help="Length of the input sequence"
+        "--Tx", type=int, default=7, help="Length of the input sequence"
     )
     parser.add_argument(
-        "--Ty", type=int, default=5, help="Length of the output sequence"
+        "--Ty", type=int, default=7, help="Length of the output sequence"
     )
     parser.add_argument(
-        "--decoder_hidden_size", "-nprime", type=int, default=1000, help="Size of the hidden layers"
-    )
-    parser.add_argument(
-        "--encoder_hidden_size", "-n", type=int, default=1000, help="Size of the hidden layers"
+        "--hidden_size", "-n", type=int, default=1000, help="Size of the hidden layers"
     )
     parser.add_argument(
         "--embedding_size", "-m", type=int, default=620, help="Size of the embedding"
     )
     parser.add_argument(
-        "--max_out_units", type=int, default=500, help="Size of the hidden layers"
+        "--max_out_units", "-l", type=int, default=500, help="Size of the hidden layers"
     )
     parser.add_argument(
         "--vocab_size_en", type=int, default=30000, help="Size of the hidden layers"
@@ -56,10 +53,10 @@ if __name__ == "__main__":
     #     "--Ty", type=int, default=4, help="Length of the output sequence"
     # )
     # parser.add_argument(
-    #     "--decoder_hidden_size", "-nprime", type=int, default=100, help="Size of the hidden layers"
+    #     "--hidden_size", "-nprime", type=int, default=100, help="Size of the hidden layers"
     # )
     # parser.add_argument(
-    #     "--encoder_hidden_size", "-n", type=int, default=100, help="Size of the hidden layers"
+    #     "--hidden_size", "-n", type=int, default=100, help="Size of the hidden layers"
     # )
     # parser.add_argument(
     #     "--embedding_size", "-m", type=int, default=60, help="Size of the embedding"
@@ -90,14 +87,14 @@ if __name__ == "__main__":
         ky=args.vocab_size_fr,
         Tx=args.Tx,
         Ty=args.Ty,
-        batch_size=32,
+        batch_size=512,
     )
 
     device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     config_rnn_decoder = dict(
-        input_size=args.encoder_hidden_size * 2,
-        hidden_size=args.decoder_hidden_size,
+        input_size=args.hidden_size * 2,
+        hidden_size=args.hidden_size,
         num_layers=1,
         device=device,
         dropout=0,
@@ -105,7 +102,7 @@ if __name__ == "__main__":
         bidirectional=False,
     )
     alignment_cfg = dict(
-        input_size=args.encoder_hidden_size * 2 + args.decoder_hidden_size,
+        input_size=args.hidden_size * 2 + args.hidden_size,
         hidden_sizes=[],
         output_size=args.Ty,
         device=device,
@@ -115,13 +112,26 @@ if __name__ == "__main__":
     )
 
     maxout_cfg = dict(
-        input_size=args.decoder_hidden_size,
+        input_size=args.hidden_size,
         output_size=args.max_out_units,
         num_units=len(bow_fr) + 1,
         device=device,
     )
+
+    output_nn_cfg = dict(
+        embedding_size=args.embedding_size,
+        max_out_units=args.max_out_units,
+        hidden_size=args.hidden_size,
+        vocab_size=len(bow_fr) + 1,
+        device=device,
+    )
+
+    decoder_embedding_cfg = dict(
+        embedding_size = args.embedding_size,
+    )
+
     decoder_fcnn_cfg = dict(
-        input_size=args.decoder_hidden_size,
+        input_size=args.hidden_size,
         hidden_sizes=[args.max_out_units],
         #hidden_sizes=[],
         output_size=len(bow_fr) + 1,
@@ -136,10 +146,12 @@ if __name__ == "__main__":
         rnn=config_rnn_decoder,
         maxout=maxout_cfg,
         fcnn=decoder_fcnn_cfg,
+        output_nn=output_nn_cfg,
+        embedding=decoder_embedding_cfg,
     )
 
     config_encoder = dict(
-        rnn_hidden_size=args.encoder_hidden_size,
+        rnn_hidden_size=args.hidden_size,
         rnn_num_layers=1,
         rnn_device=device,
         vocab_size=len(bow_en) + 1,
