@@ -8,9 +8,9 @@ class FCNN(nn.Module):
     def __init__(
         self,
         input_size: int,
-        hidden_sizes: List[int],
         output_size: int,
-        device: str,
+        hidden_sizes: List[int] = [],
+        device: str = "cpu",
         activation: nn.Module = nn.Tanh(),
         last_layer_activation: nn.Module = nn.Identity(),
         dropout: float = 0,
