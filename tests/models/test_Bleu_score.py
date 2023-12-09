@@ -3,7 +3,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from models.BLEUscore import BLEUScore
-
+ 
+ 
 class TestBLEUScore(unittest.TestCase):
     def setUp(self):
         # Créer des exemples de tenseurs pour les tests
