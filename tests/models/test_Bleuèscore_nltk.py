@@ -1,7 +1,7 @@
 import unittest
 import torch
 import torch.nn.functional as F
-import nltk
+import nltk 
 import numpy as np
 from models.BLEUscoreNLTK import BLEUScoreNLTK
 
