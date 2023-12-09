@@ -85,6 +85,7 @@ class AlignAndTranslate(nn.Module):
             for i, val_sample in enumerate(val_loader):
                 x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
                 prediction = self.forward(x[0].unsqueeze(0).to(self.device)).squeeze(0)
+    
                 prediction_idx = torch.argmax(prediction, dim=1)
                 sample = self.sample_translation(x[0], prediction_idx, y[0])
                 break
@@ -119,4 +120,6 @@ class AlignAndTranslate(nn.Module):
 
     def idx_to_word(self, idx: torch.Tensor, vocab: List):
         idx = idx.cpu().detach().numpy()
-        return " ".join(list(vocab[idx[(idx < len(vocab))]]))
+        phrase = " ".join(list(vocab[idx[(idx < len(vocab))]]))
+        phrase = phrase.replace("  ", " ")
+        return phrase
