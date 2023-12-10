@@ -10,6 +10,8 @@ from models.encoder import Encoder
 import datetime
 import os
 
+from utils.plotting import * 
+
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -77,6 +79,11 @@ class AlignAndTranslate(nn.Module):
     def load_last_model(self, directory: str = "best_models/") -> None:
         # Load last model
         try:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            if not os.listdir(directory):
+                print(f"No model found in {directory}")
+                return
             last_model = sorted(os.listdir(directory))[-1]
             self.load_model(os.path.join(directory, last_model, "model.pth"))
         except IndexError:
@@ -151,3 +158,8 @@ class AlignAndTranslate(nn.Module):
             ordered = sorted(all_candidates, key=lambda tup: tup[1])
             sequences = ordered[:k]
         return torch.tensor(sequences[0][0], dtype=torch.long)
+
+    def plot(self, source):
+        encoder_output, _ = self.encoder(source)
+
+        allignments = self.decoder.alignment.forward_unoptimized
