@@ -182,6 +182,22 @@ def extract_word_frequency(data):
 
 from transformers import AutoTokenizer
 
+from multiprocessing import Process, Manager
+
+# Helper function to pad sequences to a specified length
+def pad_to_length(x, length, pad_value):
+    if len(x) < length:
+        return x + [pad_value] * (length - len(x))
+    else:
+        return x[:length]
+
+# Function to process train data in parallel
+def process_data(tokenized, Tx, kx, Ty, ky, idx_tensor_en, idx_tensor_fr):
+    for i, x in enumerate(tokenized):
+            idx_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
+            idx_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
+
+
 
 # import autotokenizer
 def load_data(
@@ -226,7 +242,7 @@ def load_data(
     tokenizer_wrapper = TokenizerWrapper(mt_en, mt_fr)
 
     # Tokenize and save train data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/tokenized_train_data{}".format(train_len)):
+    if not os.path.exists(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len)):
         print("Tokenizing train data...")
         tokenized_train_data = train_data.map(
             tokenizer_wrapper.tokenize_function,
@@ -234,10 +250,10 @@ def load_data(
             num_proc=n_processors,
             remove_columns=["translation"],
         )
-        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/tokenized_train_data{}".format(train_len))
+        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len))
 
     # Tokenize and save validation data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/tokenized_val_data{}".format(val_len)):
+    if not os.path.exists(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len)):
         print("Tokenizing validation data...")
         tokenized_val_data = val_data.map(
             tokenizer_wrapper.tokenize_function,
@@ -316,17 +332,26 @@ def load_data(
     idx_val_tensor_en = torch.zeros((len(tokenized_val_data), Tx), dtype=torch.int16)
     idx_val_tensor_fr = torch.zeros((len(tokenized_val_data), Ty), dtype=torch.int16)
 
-    # Pad sequences and convert to PyTorch tensors for train data
-    for i, x in enumerate(tokenized_train_data):
-        print("Processing train data: {} / {} samples".format(i + 1, len(tokenized_train_data)), end="\r")
-        idx_train_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
-        idx_train_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
 
-    # Pad sequences and convert to PyTorch tensors for validation data
-    for i, x in enumerate(tokenized_val_data):
-        print("Processing validation data: {} / {} samples".format(i + 1, len(tokenized_val_data)), end="\r")
-        idx_val_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
-        idx_val_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
+    #split the tensors according to the number of processors
+    jobs = []
+    for i in range(n_processors):
+        start, end = i * len(tokenized_train_data) // n_processors, (i + 1) * len(tokenized_train_data) // n_processors
+        p = Process(target=process_data, args=(tokenized_train_data.select(list(range(start, end))), Tx, kx, Ty, ky, idx_train_tensor_en[start:end], idx_train_tensor_fr[start:end]))
+        jobs.append(p)
+        p.start()
+    for proc in jobs:
+        proc.join()
+
+    jobs = []
+    for i in range(n_processors):
+        start, end = i * len(tokenized_val_data) // n_processors, (i + 1) * len(tokenized_val_data) // n_processors
+        p = Process(target=process_data, args=(tokenized_val_data.select(list(range(start, end))), Tx, kx, Ty, ky, idx_val_tensor_en[start:end], idx_val_tensor_fr[start:end]))
+        jobs.append(p)
+        p.start()
+    for proc in jobs:
+        proc.join()
+
 
     # Extract English and French sentences for train and validation data
     train_english_sentences = [train_data[i]["translation"]["en"] for i in range(len(train_data))]

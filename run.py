@@ -10,15 +10,15 @@ parser = argparse.ArgumentParser()
 
 if __name__ == "__main__":
     # Parse command-line arguments
-    parser.add_argument("--train_len", type=int, default=10000, help="Number of training examples")
+    parser.add_argument("--train_len", type=int, default=30000, help="Number of training examples")
     parser.add_argument("--val_len", type=int, default=None, help="Number of validation examples")
     parser.add_argument("--Tx", type=int, default=10, help="Length of the input sequence")
     parser.add_argument("--Ty", type=int, default=10, help="Length of the output sequence")
     parser.add_argument("--hidden_size", "-n", type=int, default=256, help="Size of the hidden layers")
     parser.add_argument("--embedding_size", "-m", type=int, default=256, help="Size of the embedding")
     parser.add_argument("--max_out_units", "-l", type=int, default=64, help="Size of the hidden layers")
-    parser.add_argument("--vocab_size_en", type=int, default=5000, help="Size of the English vocabulary")
-    parser.add_argument("--vocab_size_fr", type=int, default=5000, help="Size of the French vocabulary")
+    parser.add_argument("--vocab_size_en", type=int, default=10000, help="Size of the English vocabulary")
+    parser.add_argument("--vocab_size_fr", type=int, default=10000, help="Size of the French vocabulary")
     parser.add_argument("--batch_size", type=int, default=64, help="Size of the batches")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs")
     parser.add_argument("--vocab_source", type=str, default="train", help="Path to the vocabulary file")
