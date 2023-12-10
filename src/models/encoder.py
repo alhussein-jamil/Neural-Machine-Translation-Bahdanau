@@ -29,7 +29,6 @@ class Encoder(nn.Module):
         )
         self.embedding = FCNN(
             input_size=vocab_size,
-            hidden_sizes=[],
             output_size=embedding_size,
             device=rnn_device,
             activation=nn.Tanh(),

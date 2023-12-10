@@ -7,6 +7,9 @@ from metrics.losses import Loss
 from models.decoder import Decoder
 from models.encoder import Encoder
 
+import datetime
+import os
+
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -21,15 +24,16 @@ class AlignAndTranslate(nn.Module):
         self.optimizer = training_config.get("optimizer", torch.optim.Adam(self.parameters()))
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
-        self.batch_size = training_config.get("batch_size", 32)
         self.print_every = training_config.get("print_every", 100)
         self.save_every = training_config.get("save_every", 1000)
-        self.checkpoint = training_config.get("checkpoint", "checkpoint.pth")
-        self.best_model = training_config.get("best_model", "best_model.pth")
         self.output_vocab_size = training_config.get("output_vocab_size", 100)
         self.best_val_loss = float("inf")
         self.english_vocab = training_config.get("english_vocab", [])
         self.french_vocab = training_config.get("french_vocab", [])
+        self.load_last_checkpoints = training_config.get("load_last_model", False)
+        if self.load_last_checkpoints:
+            self.load_last_model()
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Forward pass through encoder and decoder
@@ -41,18 +45,42 @@ class AlignAndTranslate(nn.Module):
         # Training step
         self.optimizer.zero_grad()
         output = self.forward(x.to(self.device))
-        loss = self.criterion(output, y) / self.batch_size
-        #normalize L2 loss so that it stays under 1
-        if torch.norm(loss) > 1:
-            loss = loss / torch.norm(loss)
+        loss = self.criterion(output, y)
+        # normalize L2 loss so that it stays under 1
+        # if torch.norm(loss) > 1:
+        #     loss = loss / torch.norm(loss)
         loss.backward()
         self.optimizer.step()
         return loss.item()
 
-    def save_model(self, path: str) -> None:
+    def save_model(self, directory: str = "checkpoints/") -> None:
+        # Create a directory with timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        save_dir = os.path.join(directory, timestamp)
+        os.makedirs(directory, exist_ok=True)
+        os.makedirs(save_dir, exist_ok=True)
+
         # Save model
-        torch.save(self.state_dict(), path)
-        print(f"Model saved at {path}")
+        save_path = os.path.join(save_dir, "model.pth")
+        torch.save(self.state_dict(), save_path)
+        print(f"Model saved at {save_path}")
+
+    def load_model(self, path: str) -> None:
+        # Check compatibility
+        try:
+            state_dict = torch.load(path)
+            self.load_state_dict(state_dict)
+            print(f"Model loaded from {path}")
+        except RuntimeError as e:
+            print(f"Failed to load model from {path}: {str(e)}")
+    
+    def load_last_model(self, directory: str = "best_models/") -> None:
+        # Load last model
+        try:
+            last_model = sorted(os.listdir(directory))[-1]
+            self.load_model(os.path.join(directory, last_model, "model.pth"))
+        except IndexError:
+            print(f"No model found in {directory}")
 
     def train(self, train_loader, val_loader) -> None:
         # Training loop
@@ -68,13 +96,13 @@ class AlignAndTranslate(nn.Module):
                 if i % self.print_every == 0:
                     print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}")
                 if i % self.save_every == 0:
-                    self.save_model(self.checkpoint)
+                    self.save_model("checkpoints/")
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
 
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
-                self.save_model(self.best_model)
+                self.save_model("best_models/")
 
     def evaluate(self, val_loader) -> float:
         # Evaluation function
@@ -82,7 +110,7 @@ class AlignAndTranslate(nn.Module):
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output = self.forward(x.to(self.device))
-            loss = self.criterion(output, y.to(self.device)) / self.batch_size
+            loss = self.criterion(output, y.to(self.device)) 
             total_loss += loss.item()
             if i == 0:
                 prediction = output[0]
