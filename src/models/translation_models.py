@@ -40,7 +40,8 @@ class AlignAndTranslate(nn.Module):
             self.load_last_model()
 
         self.losses = []
-
+        if not os.path.exists(DATA_DIR / f"outputs/"):
+            os.makedirs(DATA_DIR / f"outputs/")
 
 
     def forward(self, x: torch.Tensor, validation: bool = False) -> torch.Tensor:
@@ -68,8 +69,7 @@ class AlignAndTranslate(nn.Module):
         directory = os.path.join(DATA_DIR, directory)
 
         # Create a directory with timestamp
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        save_dir = os.path.join(directory, timestamp)
+        save_dir = os.path.join(directory, self.timestamp)
         os.makedirs(directory, exist_ok=True)
         os.makedirs(save_dir, exist_ok=True)
 
@@ -78,7 +78,7 @@ class AlignAndTranslate(nn.Module):
         torch.save(self.state_dict(), save_path)
         print(f"Model saved at {save_path}")
         with open(save_dir + "/losses.txt", "w") as myfile:
-            myfile.write("{}\n".format(timestamp))
+            myfile.write("{}\n".format(self.timestamp))
             for loss in self.losses:
                 myfile.write("{}\n".format(loss))
 
@@ -134,6 +134,7 @@ class AlignAndTranslate(nn.Module):
         total_loss = 0
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
+            x_sentences, y_sentences = val_sample["english"]["sentences"], val_sample["french"]["sentences"]
             output, allignments= self.forward(x.to(self.device), validation=True)
             loss = self.criterion(output, y.to(self.device)) 
             total_loss += loss.item()
@@ -141,13 +142,22 @@ class AlignAndTranslate(nn.Module):
                 prediction = output[:4]
                 prediction[:,:,-2] = torch.min(prediction)
                 prediction_idx = self.beam_search(prediction, 3) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
- 
+
                 sample = self.sample_translation(x[:4], prediction_idx, y[:4])
-                print(f"Source: {sample[0][0]}")
-                print(f"Prediction: {sample[1][0]}")
-                print(f"Translation: {sample[2][0]}")
+
+                output_text = f"\tSource: {sample[0][0]}\n"
+                output_text += f"\tPrediction: {sample[1][0]}\n"
+                output_text += f"\tTranslation: {sample[2][0]}\n"
+                
+                with open(DATA_DIR / f"outputs/outputs_{self.timestamp}.txt", "w") as myfile:
+                    myfile.write(output_text)
+                print(output_text)
                 self.plot_attention(sample[0], sample[1], allignments[:4])
         return total_loss / len(val_loader)
+
+    @property
+    def timestamp(self):
+        return datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     def sample_translation(self, source, prediction, translation):
         source_sentences = []
@@ -156,12 +166,9 @@ class AlignAndTranslate(nn.Module):
         for i in range(source.shape[0]):
             s, p, t = source[i], prediction[i], translation[i]
             # Sample a translation from the model
-            source_sentence = self.idx_to_word(s, self.english_vocab)
-            prediction_sentence = self.idx_to_word(p, self.french_vocab)
-            translation_sentence = self.idx_to_word(t, self.french_vocab)
-            source_sentences.append(source_sentence)
-            prediction_sentences.append(prediction_sentence)
-            translation_sentences.append(translation_sentence)
+            source_sentences.append(self.idx_to_word(s, self.english_vocab))
+            prediction_sentences.append(self.idx_to_word(p, self.french_vocab))
+            translation_sentences.append(self.idx_to_word(t, self.french_vocab))
 
         return [source_sentences, prediction_sentences, translation_sentences]
 
@@ -221,9 +228,8 @@ class AlignAndTranslate(nn.Module):
         for i in range(alignments.shape[0]):
             alls.append(alignments[i, :len(prediction_list[i]), :len(source_list[i])])
 
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         data = {
             f"phrase {i}": (source_list[i], prediction_list[i], alls[i]) for i in range(len(source_list))
         }
-        plot_alignment(data, save_path=f"alignment_{timestamp}.png")
+        plot_alignment(data, save_path=f"alignment_{self.timestamp}.png")

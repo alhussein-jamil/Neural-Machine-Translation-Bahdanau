@@ -198,7 +198,7 @@ def load_data(
     """
     Load and preprocess data for training and validation.
     """
-
+    print("Loading and preprocessing data...")
     mt_en = MosesTokenizer(lang="en") if tokenizer == "Moses" else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
     mt_fr = MosesTokenizer(lang="fr") if tokenizer == "Moses" else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
 
@@ -227,6 +227,7 @@ def load_data(
 
     # Tokenize and save train data if not already done
     if not os.path.exists(DATA_DIR / "processed_data/tokenized_train_data{}".format(train_len)):
+        print("Tokenizing train data...")
         tokenized_train_data = train_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
@@ -237,23 +238,25 @@ def load_data(
 
     # Tokenize and save validation data if not already done
     if not os.path.exists(DATA_DIR / "processed_data/tokenized_val_data{}".format(val_len)):
+        print("Tokenizing validation data...")
         tokenized_val_data = val_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
             num_proc=n_processors,
             remove_columns=["translation"],
         )
-        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/tokenized_val_data{}".format(val_len))
+        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len))
 
-    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/tokenized_train_data{}".format(train_len))
-    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/tokenized_val_data{}".format(val_len))
+    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len))
+    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len))
 
-    if not os.path.exists(DATA_DIR / "processed_data/word_count{}".format(train_len)):
+    if not os.path.exists(DATA_DIR / "processed_data/word_count_{}".format(train_len)):
+        print("Counting word frequency...")
         word_count = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
-        word_count.save_to_disk(DATA_DIR / "processed_data/word_count{}".format(train_len))
-    word_count = load_from_disk(DATA_DIR / "processed_data/word_count{}".format(train_len))
+        word_count.save_to_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
+    word_count = load_from_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
 
-    print("extracting word frequency")
+    print("Extracting word frequency...")
     if os.path.exists(DATA_DIR / "dictionaries/") == False:
         os.mkdir(DATA_DIR / "dictionaries/")
     if vocab_source == "train":
@@ -267,7 +270,7 @@ def load_data(
     else:
         bow_english = pd.read_csv(EXT_DATA_DIR / "dictionaries/unigram_freq_en_ext.csv")
         bow_french = pd.read_csv(EXT_DATA_DIR / "dictionaries/unigram_freq_fr_ext.csv")
-    print("done extraction")
+    print("Done extraction")
     bow_english = bow_english[:kx]
     bow_french = bow_french[:ky]
 
@@ -287,11 +290,13 @@ def load_data(
 
     # Convert tokenized sentences to word IDs and save train data if not already done
     if not os.path.exists(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source)):
+        print("Converting train data to word IDs...")
         tokenized_train_data = tokenized_train_data.map(to_id_transform, batched=False, num_proc=n_processors)
         tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source))
 
     # Convert tokenized sentences to word IDs and save validation data if not already done
     if not os.path.exists(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source)):
+        print("Converting validation data to word IDs...")
         tokenized_val_data = tokenized_val_data.map(to_id_transform, batched=False, num_proc=n_processors)
         tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source))
 
@@ -313,11 +318,13 @@ def load_data(
 
     # Pad sequences and convert to PyTorch tensors for train data
     for i, x in enumerate(tokenized_train_data):
+        print("Processing train data: {} / {} samples".format(i + 1, len(tokenized_train_data)), end="\r")
         idx_train_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
         idx_train_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
 
     # Pad sequences and convert to PyTorch tensors for validation data
     for i, x in enumerate(tokenized_val_data):
+        print("Processing validation data: {} / {} samples".format(i + 1, len(tokenized_val_data)), end="\r")
         idx_val_tensor_en[i] = torch.tensor(pad_to_length(x["ids_en"], Tx, kx))
         idx_val_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
 
@@ -347,6 +354,30 @@ def load_data(
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+
+    #print some samples 
+    print("Some samples from the training dataset from the loaded data")
+    for i, sample in enumerate(train_dataset):
+        if i == 5:
+            break
+        print("English: ", sample["english"]["sentences"])
+        print("French: ", sample["french"]["sentences"])
+        print("English ids: ", sample["english"]["idx"])
+        print("French ids: ", sample["french"]["idx"])
+        print("\n")
+
+    print("Some samples from the validation dataset from the loaded data")
+    for i, sample in enumerate(val_dataset):
+        if i == 5:
+            break
+        print("English: ", sample["english"]["sentences"])
+        print("French: ", sample["french"]["sentences"])
+        print("English ids: ", sample["english"]["idx"])
+        print("French ids: ", sample["french"]["idx"])
+        print("\n")
+
+    print("Data loading and preprocessing complete.")
+
     return (
         (data["train"], train_dataloader),
         (data["val"], val_dataloader),
