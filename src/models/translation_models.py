@@ -14,6 +14,8 @@ import os
 from utils.plotting import * 
 from global_variables import DATA_DIR
 
+from sacremoses import MosesTokenizer, MosesDetokenizer
+
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
@@ -166,16 +168,18 @@ class AlignAndTranslate(nn.Module):
         for i in range(source.shape[0]):
             s, p, t = source[i], prediction[i], translation[i]
             # Sample a translation from the model
-            source_sentences.append(self.idx_to_word(s, self.english_vocab))
-            prediction_sentences.append(self.idx_to_word(p, self.french_vocab))
-            translation_sentences.append(self.idx_to_word(t, self.french_vocab))
+            source_sentences.append(self.idx_to_word(s, self.english_vocab, language="en"))
+            prediction_sentences.append(self.idx_to_word(p, self.french_vocab, language="fr"))
+            translation_sentences.append(self.idx_to_word(t, self.french_vocab, language="fr"))
 
         return [source_sentences, prediction_sentences, translation_sentences]
 
-    def idx_to_word(self, idx: torch.Tensor, vocab: List):
+    def idx_to_word(self, idx: torch.Tensor, vocab: List, language="fr") -> str:
         # Convert index to word
         idx = idx.cpu().detach().numpy()
-        phrase = " ".join(list(vocab[idx[(idx < len(vocab))]]))
+        tokens = list(vocab[idx[(idx < len(vocab))]])
+        detokenizer = MosesDetokenizer(lang= language)
+        phrase = detokenizer.detokenize(tokens, return_str=True)
         phrase = phrase.replace("  ", " ")
         return phrase
 
