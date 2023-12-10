@@ -16,12 +16,8 @@ class TestDecoder(unittest.TestCase):
 
         config_alignment = dict(
             input_size=self.hidden_size * 3,
-            hidden_sizes=[10, 10],
             output_size=self.seqlen,
             device="cpu",
-            activation=torch.nn.ReLU(),
-            last_layer_activation=torch.nn.Sigmoid(),
-            dropout=0.2,
         )
 
         config_rnn = dict(

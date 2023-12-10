@@ -17,7 +17,7 @@ class AlignAndTranslate(nn.Module):
 
         # Training configuration
         training_config = kwargs.get("training", {})
-        self.criterion = training_config.get("criterion", Loss(nn.NLLLoss(reduction="sum")))
+        self.criterion = training_config.get("criterion", Loss(nn.NLLLoss(reduction="mean")))
         self.optimizer = training_config.get("optimizer", torch.optim.Adam(self.parameters()))
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
@@ -42,6 +42,9 @@ class AlignAndTranslate(nn.Module):
         self.optimizer.zero_grad()
         output = self.forward(x.to(self.device))
         loss = self.criterion(output, y) / self.batch_size
+        #normalize L2 loss so that it stays under 1
+        if torch.norm(loss) > 1:
+            loss = loss / torch.norm(loss)
         loss.backward()
         self.optimizer.step()
         return loss.item()
