@@ -41,6 +41,7 @@ if __name__ == "__main__":
         Ty=args.Ty,
         batch_size=args.batch_size,
         vocab_source=args.vocab_source,
+        mp = True,
     )
 
     device = "cpu" if not torch.cuda.is_available() else "cuda"

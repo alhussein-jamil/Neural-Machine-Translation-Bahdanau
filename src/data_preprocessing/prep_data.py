@@ -223,6 +223,7 @@ def load_data(
     batch_size=32,
     tokenizer="Moses",
     vocab_source="train",
+    mp = True,
 ):
     """
     Load and preprocess data for training and validation.
@@ -341,8 +342,8 @@ def load_data(
 
 
     #split the tensors according to the number of processors
-    pad_multiprocess(tokenized_train_data, idx_train_tensor_en, idx_train_tensor_fr, Tx, Ty, kx, ky)
-    pad_multiprocess(tokenized_val_data, idx_val_tensor_en, idx_val_tensor_fr, Tx, Ty, kx, ky)
+    pad_multiprocess(tokenized_train_data, idx_train_tensor_en, idx_train_tensor_fr, Tx, Ty, kx, ky, mp)
+    pad_multiprocess(tokenized_val_data, idx_val_tensor_en, idx_val_tensor_fr, Tx, Ty, kx, ky, mp)
 
     # Extract English and French sentences for train and validation data
     train_english_sentences = [train_data[i]["translation"]["en"] for i in range(len(train_data))]
