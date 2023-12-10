@@ -4,7 +4,7 @@ plots/
 *__pycache__*
 data/t*
 *cache*
-*processed_data/*
+*data/*
 *.pth
 *.ipynb
-*0.csv
+!data/dictionaries/unigram_frq_*_ext.csv

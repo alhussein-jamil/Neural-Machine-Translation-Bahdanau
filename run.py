@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser()
 
 if __name__ == "__main__":
     # Parse command-line arguments
-    parser.add_argument("--train_len", type=int, default=100000, help="Number of training examples")
+    parser.add_argument("--train_len", type=int, default=10000, help="Number of training examples")
     parser.add_argument("--val_len", type=int, default=None, help="Number of validation examples")
     parser.add_argument("--Tx", type=int, default=10, help="Length of the input sequence")
     parser.add_argument("--Ty", type=int, default=10, help="Length of the output sequence")

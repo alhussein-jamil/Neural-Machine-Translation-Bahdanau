@@ -8,6 +8,7 @@ import torch
 from datasets import load_dataset, load_from_disk
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch.utils.data import Dataset
+from global_variables import DATA_DIR   
 
 n_processors = cpu_count()
 
@@ -221,45 +222,45 @@ def load_data(
     tokenizer_wrapper = TokenizerWrapper(mt_en, mt_fr)
 
     # Tokenize and save train data if not already done
-    if not os.path.exists("processed_data/tokenized_train_data{}".format(train_len)):
+    if not os.path.exists(DATA_DIR / "processed_data/tokenized_train_data{}".format(train_len)):
         tokenized_train_data = train_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
             num_proc=n_processors,
             remove_columns=["translation"],
         )
-        tokenized_train_data.save_to_disk("processed_data/tokenized_train_data{}".format(train_len))
+        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/tokenized_train_data{}".format(train_len))
 
     # Tokenize and save validation data if not already done
-    if not os.path.exists("processed_data/tokenized_val_data{}".format(val_len)):
+    if not os.path.exists(DATA_DIR / "processed_data/tokenized_val_data{}".format(val_len)):
         tokenized_val_data = val_data.map(
             tokenizer_wrapper.tokenize_function,
             batched=False,
             num_proc=n_processors,
             remove_columns=["translation"],
         )
-        tokenized_val_data.save_to_disk("processed_data/tokenized_val_data{}".format(val_len))
+        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/tokenized_val_data{}".format(val_len))
 
-    tokenized_train_data = load_from_disk("processed_data/tokenized_train_data{}".format(train_len))
-    tokenized_val_data = load_from_disk("processed_data/tokenized_val_data{}".format(val_len))
+    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/tokenized_train_data{}".format(train_len))
+    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/tokenized_val_data{}".format(val_len))
 
-    if not os.path.exists("processed_data/word_count{}".format(train_len)):
+    if not os.path.exists(DATA_DIR / "processed_data/word_count{}".format(train_len)):
         word_count = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
-        word_count.save_to_disk("processed_data/word_count{}".format(train_len))
-    word_count = load_from_disk("processed_data/word_count{}".format(train_len))
+        word_count.save_to_disk(DATA_DIR / "processed_data/word_count{}".format(train_len))
+    word_count = load_from_disk(DATA_DIR / "processed_data/word_count{}".format(train_len))
 
     print("extracting word frequency")
     if vocab_source == "train":
-        if not os.path.exists("data/unigram_freq_en_{}.csv".format(train_len)):
+        if not os.path.exists(DATA_DIR / "dictionaries/unigram_freq_en_{}.csv".format(train_len)):
             df_en, df_fr = extract_word_frequency(word_count)
-            df_en.to_csv("data/unigram_freq_en_{}.csv".format(train_len), index=False)
-            df_fr.to_csv("data/unigram_freq_fr_{}.csv".format(train_len), index=False)
-        df_en = pd.read_csv("data/unigram_freq_en_{}.csv".format(train_len))
-        df_fr = pd.read_csv("data/unigram_freq_fr_{}.csv".format(train_len))
+            df_en.to_csv(DATA_DIR / "dictionaries/unigram_freq_en_{}.csv".format(train_len), index=False)
+            df_fr.to_csv(DATA_DIR / "dictionaries/unigram_freq_fr_{}.csv".format(train_len), index=False)
+        df_en = pd.read_csv(DATA_DIR / "dictionaries/unigram_freq_en_{}.csv".format(train_len))
+        df_fr = pd.read_csv(DATA_DIR / "dictionaries/unigram_freq_fr_{}.csv".format(train_len))
         bow_english, bow_french = df_en, df_fr
     else:
-        bow_english = pd.read_csv("data/unigram_freq_en_ext.csv")
-        bow_french = pd.read_csv("data/unigram_freq_fr_ext.csv")
+        bow_english = pd.read_csv(DATA_DIR / "dictionaries/unigram_freq_en_ext.csv")
+        bow_french = pd.read_csv(DATA_DIR / "dictionaries/unigram_freq_fr_ext.csv")
     print("done extraction")
     bow_english = bow_english[:kx]
     bow_french = bow_french[:ky]
@@ -279,17 +280,17 @@ def load_data(
     )
 
     # Convert tokenized sentences to word IDs and save train data if not already done
-    if not os.path.exists("processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)):
+    if not os.path.exists(DATA_DIR / "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)):
         tokenized_train_data = tokenized_train_data.map(to_id_transform, batched=False, num_proc=n_processors)
-        tokenized_train_data.save_to_disk("processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
+        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
 
     # Convert tokenized sentences to word IDs and save validation data if not already done
-    if not os.path.exists("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky)):
+    if not os.path.exists(DATA_DIR / "processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky)):
         tokenized_val_data = tokenized_val_data.map(to_id_transform, batched=False, num_proc=n_processors)
-        tokenized_val_data.save_to_disk("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
+        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
 
-    tokenized_train_data = load_from_disk("processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
-    tokenized_val_data = load_from_disk("processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
+    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
+    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
 
     # Helper function to pad sequences to a specified length
     def pad_to_length(x, length, pad_value):

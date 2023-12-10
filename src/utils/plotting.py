@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
-
+from global_variables import DATA_DIR
 
 def plot_alignment(
     data: Dict[str, Tuple[List[str], List[str], np.ndarray]],
@@ -23,13 +23,14 @@ def plot_alignment(
     """
 
     # Determine the number of rows and columns for subplots
-    h, w = (len(data) + 1) // 2, 2
+    h, w = (len(data) + 1) // 2, 2 if len(data) % 2 == 0 else 1
 
     # Set the figure size based on the number of subplots
-    fig_size = (10, h * 5)
+    fig_size = (10* w, h * 10)
 
     # Create subplots
     _, axes = plt.subplots(h, w, figsize=fig_size)
+    axes = np.array(axes)
     axes = axes.reshape(h, w)
 
     # Iterate through the data and plot alignment for each pair of phrases
@@ -40,7 +41,7 @@ def plot_alignment(
         ax = axes[i // 2, i % 2]
 
         # Plot the alignment matrix
-        ax.imshow(alignment, cmap="gray")
+        ax.imshow(alignment, cmap="gray", aspect="auto")  # Set aspect to "auto" to fill the entire width
 
         # Set ticks and labels
         ax.set_xticks(np.arange(len(phrase1)))
@@ -55,6 +56,7 @@ def plot_alignment(
     # Save or display the plot
     if save_path:
         save_dir = "plots"
+        save_dir = os.path.join(DATA_DIR, save_dir)
         os.makedirs(save_dir, exist_ok=True)
         save_file = os.path.join(save_dir, save_path)
         plt.savefig(save_file)
@@ -87,6 +89,7 @@ def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
     # Save or display the plot
     if save_path:
         save_dir = "plots"
+        save_dir = os.path.join(DATA_DIR, save_dir)
         os.makedirs(save_dir, exist_ok=True)
         save_file = os.path.join(save_dir, save_path)
         plt.savefig(save_file)

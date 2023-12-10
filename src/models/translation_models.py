@@ -11,6 +11,7 @@ import datetime
 import os
 
 from utils.plotting import * 
+from global_variables import DATA_DIR
 
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -36,17 +37,22 @@ class AlignAndTranslate(nn.Module):
         if self.load_last_checkpoints:
             self.load_last_model()
 
+        self.losses = []
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+
+
+    def forward(self, x: torch.Tensor, validation: bool = False) -> torch.Tensor:
         # Forward pass through encoder and decoder
         encoder_output, _ = self.encoder(x)
-        decoder_output = self.decoder(encoder_output)
-        return decoder_output
+        decoder_output, allignments= self.decoder(encoder_output)
+        return (decoder_output, allignments) if validation else decoder_output
 
     def train_step(self, x: torch.Tensor, y: torch.Tensor) -> float:
         # Training step
         self.optimizer.zero_grad()
+
         output = self.forward(x.to(self.device))
+
         loss = self.criterion(output, y)
         # normalize L2 loss so that it stays under 1
         # if torch.norm(loss) > 1:
@@ -56,6 +62,9 @@ class AlignAndTranslate(nn.Module):
         return loss.item()
 
     def save_model(self, directory: str = "checkpoints/") -> None:
+        
+        directory = os.path.join(DATA_DIR, directory)
+
         # Create a directory with timestamp
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         save_dir = os.path.join(directory, timestamp)
@@ -66,6 +75,10 @@ class AlignAndTranslate(nn.Module):
         save_path = os.path.join(save_dir, "model.pth")
         torch.save(self.state_dict(), save_path)
         print(f"Model saved at {save_path}")
+        with open(save_dir + "/losses.txt", "w") as myfile:
+            myfile.write("{}\n".format(timestamp))
+            for loss in self.losses:
+                myfile.write("{}\n".format(loss))
 
     def load_model(self, path: str) -> None:
         # Check compatibility
@@ -77,6 +90,7 @@ class AlignAndTranslate(nn.Module):
             print(f"Failed to load model from {path}: {str(e)}")
     
     def load_last_model(self, directory: str = "best_models/") -> None:
+        directory = os.path.join(DATA_DIR, directory)
         # Load last model
         try:
             if not os.path.exists(directory):
@@ -100,10 +114,12 @@ class AlignAndTranslate(nn.Module):
                 x = x.to(self.device)
                 y = y.to(self.device)
                 loss = self.train_step(x, y)
+                self.losses.append(loss)
                 if i % self.print_every == 0:
                     print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}")
+                    #add losses to a text file
                 if i % self.save_every == 0:
-                    self.save_model("checkpoints/")
+                    self.save_model( "checkpoints/")
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
 
@@ -116,27 +132,35 @@ class AlignAndTranslate(nn.Module):
         total_loss = 0
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
-            output = self.forward(x.to(self.device))
+            output, allignments= self.forward(x.to(self.device), validation=True)
             loss = self.criterion(output, y.to(self.device)) 
             total_loss += loss.item()
             if i == 0:
                 prediction = output[0]
                 prediction[:, -1] = -float("inf")  # Prevent the model from predicting the unknown token
                 prediction_idx = self.beam_search_decoder(prediction, 5)
-                sample = self.sample_translation(x[0], prediction_idx, y[0])
-                print(f"Source: {sample[0]}")
-                print(f"Prediction: {sample[1]}")
-                print(f"Translation: {sample[2]}")
-
+                sample = self.sample_translation(x[:4], prediction_idx, y[:4])
+                print(f"Source: {sample[0][0]}")
+                print(f"Prediction: {sample[1][0]}")
+                print(f"Translation: {sample[2][0]}")
+                self.plot_attention(sample[0], sample[1], allignments[:4])
         return total_loss / len(val_loader)
 
     def sample_translation(self, source, prediction, translation):
-        # Sample a translation from the model
-        source_sentence = self.idx_to_word(source, self.english_vocab)
-        prediction_sentence = self.idx_to_word(prediction, self.french_vocab)
-        translation_sentence = self.idx_to_word(translation, self.french_vocab)
+        source_sentences = []
+        prediction_sentences = []
+        translation_sentences = []
+        for i in range(source.shape[0]):
+            s, p, t = source[i], prediction[i], translation[i]
+            # Sample a translation from the model
+            source_sentence = self.idx_to_word(s, self.english_vocab)
+            prediction_sentence = self.idx_to_word(p, self.french_vocab)
+            translation_sentence = self.idx_to_word(t, self.french_vocab)
+            source_sentences.append(source_sentence)
+            prediction_sentences.append(prediction_sentence)
+            translation_sentences.append(translation_sentence)
 
-        return source_sentence, prediction_sentence, translation_sentence
+        return [source_sentences, prediction_sentences, translation_sentences]
 
     def idx_to_word(self, idx: torch.Tensor, vocab: List):
         # Convert index to word
@@ -157,9 +181,19 @@ class AlignAndTranslate(nn.Module):
                     all_candidates.append(candidate)
             ordered = sorted(all_candidates, key=lambda tup: tup[1])
             sequences = ordered[:k]
-        return torch.tensor(sequences[0][0], dtype=torch.long)
+        return [torch.tensor(seq, dtype=torch.long) for seq, _ in sequences]
 
-    def plot(self, source):
-        encoder_output, _ = self.encoder(source)
+    def plot_attention(self, source, prediction, allignments):
+        source_list = [s.split(" ") for s in source]
+        prediction_list = [p.split(" ") for p in prediction]
+        alls = []
+        alignments = allignments.cpu().detach().numpy()
+        for i in range(alignments.shape[0]):
+            alls.append(alignments[i, :len(prediction_list[i]), :len(source_list[i])])
 
-        allignments = self.decoder.alignment.forward_unoptimized
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        data = {
+            f"phrase {i}": (source_list[i], prediction_list[i], alls[i]) for i in range(len(source_list))
+        }
+        plot_alignment(data, save_path=f"alignment_{timestamp}.png")

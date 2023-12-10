@@ -32,6 +32,8 @@ class Alignment(nn.Module):
 
         return a
 
+    def forward_unoptimized(self, s, h):
+        return forward(self, self.nn_s(s), self.nn_h(h))
 
 class OutputNetwork(nn.Module):
     def __init__(
@@ -123,14 +125,14 @@ class Decoder(nn.Module):
         ).to(h.device)
 
         h_emb = self.alignment.nn_h(h)
-
+        allignments = []
         for i in range(h.size(1)):
             # Compute the embedding of the current context vector
             s_i_emb = self.alignment.nn_s(s_i.view(h.size(0), -1))
 
             # Compute alignment vector
             a = self.alignment(s_i_emb, h_emb[:, i, :])
-
+            allignments.append(a)
             # Apply softmax to obtain attention weights
             e = F.softmax(a, dim=1)
 
@@ -149,4 +151,4 @@ class Decoder(nn.Module):
             # Store the output in the output tensor
             output[:, i, :] = output_network_out
 
-        return output
+        return output, torch.stack(allignments, dim=1)

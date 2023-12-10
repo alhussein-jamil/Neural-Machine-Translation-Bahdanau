@@ -57,7 +57,7 @@ class TestDecoder(unittest.TestCase):
 
     def test_forward(self):
         decoder = Decoder(**self.config)
-        output = decoder(self.sample_entry)
+        output, _= decoder(self.sample_entry)
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 
 
