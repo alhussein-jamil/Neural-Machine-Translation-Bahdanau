@@ -33,7 +33,7 @@ class Alignment(nn.Module):
         return a
 
     def forward_unoptimized(self, s, h):
-        return forward(self, self.nn_s(s), self.nn_h(h))
+        return self.forward(self, self.nn_s(s), self.nn_h(h))
 
 class OutputNetwork(nn.Module):
     def __init__(
@@ -57,13 +57,11 @@ class OutputNetwork(nn.Module):
         super().__init__()
         self.t_nn = FCNN(
             input_size=embedding_size + 3 * hidden_size,
-            hidden_sizes=[],
             output_size=2 * max_out_units,
             device=device,
         )
         self.output_nn = FCNN(
             input_size=max_out_units,
-            hidden_sizes=[],
             output_size=vocab_size,
             device=device,
         )
@@ -82,10 +80,10 @@ class OutputNetwork(nn.Module):
             torch.Tensor: The output tensor.
         """
         # based on the article Maxout Networks
-        t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1))
+        t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1)) 
         t_even = t_tilde[:, : t_tilde.size(1) // 2]
         t_odd = t_tilde[:, t_tilde.size(1) // 2 :]
-        t = torch.max(t_even, t_odd)
+        t = torch.max(t_even, t_odd) 
         return self.output_nn(t)
 
 
@@ -130,6 +128,7 @@ class Decoder(nn.Module):
                 h.size(0),
                 self.rnn.hidden_size,
             ).to(h.device)
+            torch.nn.init.xavier_uniform_(s_i)
 
             h_emb = self.alignment.nn_h(h)
             allignments = []
@@ -158,7 +157,7 @@ class Decoder(nn.Module):
                 # Store the output in the output tensor
                 output[:, i, :] = output_network_out
         else: 
-            output_rnn, hidden = self.rnn(h)
+            output_rnn, _ = self.rnn(h)
             relaxed = self.relaxation_nn(output_rnn)
             output[:,:,:] = relaxed  
 

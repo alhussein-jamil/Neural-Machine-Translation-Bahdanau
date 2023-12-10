@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-
+from torch.nn import init
 
 class RNN(nn.Module):
     """
@@ -65,6 +65,9 @@ class RNN(nn.Module):
             bidirectional=bidirectional,
         ).to(self.device)
 
+        # Initialize weights
+        self.init_weights()
+
     def forward(self, x, h0=None):
         """
         Forward pass of the RNN.
@@ -82,7 +85,17 @@ class RNN(nn.Module):
                 x.size(0),
                 self.hidden_size,
             ).to(self.device)
+            #initialize with xavier
+            torch.nn.init.xavier_uniform_(h0)
 
         # Forward propagate RNN
         out, hidden = self.rnn(x, h0)
         return out, hidden
+    
+
+    def init_weights(self):
+        for name, param in self.named_parameters():
+            
+           if "weight" in name:
+                if "rnn" in name:
+                    init.orthogonal_(param.data)

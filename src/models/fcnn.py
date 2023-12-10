@@ -3,6 +3,7 @@ from typing import List
 import torch
 from torch import nn
 
+from torch.nn import init
 
 class FCNN(nn.Module):
     def __init__(
@@ -50,6 +51,9 @@ class FCNN(nn.Module):
         # Add the dropout layer
         self.dropout = nn.Dropout(dropout)
 
+        # Initialize the weights
+        self.init_weights()
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Forward pass of the FCNN.
@@ -76,3 +80,7 @@ class FCNN(nn.Module):
         x = self.last_layer_activation(x)
 
         return x
+    
+    def init_weights(self):
+        for name, param in self.named_parameters():
+            init.normal_(param.data, mean=0, std=0.01)  
