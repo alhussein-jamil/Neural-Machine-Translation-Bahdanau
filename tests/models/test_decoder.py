@@ -52,11 +52,19 @@ class TestDecoder(unittest.TestCase):
         return super().setUp()
 
     def test_initalization(self):
-        decoder = Decoder(**self.config)
+
+        decoder = Decoder(**self.config, traditional=False)
+        self.assertIsInstance(decoder, torch.nn.Module)
+
+        decoder = Decoder(**self.config, traditional=True)
         self.assertIsInstance(decoder, torch.nn.Module)
 
     def test_forward(self):
-        decoder = Decoder(**self.config)
+        decoder = Decoder(**self.config, traditional=False)
+        output, _= decoder(self.sample_entry)
+        self.assertEqual(output.shape, torch.Size([3, 5, 12]))
+
+        decoder = Decoder(**self.config, traditional=True)
         output, _= decoder(self.sample_entry)
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 

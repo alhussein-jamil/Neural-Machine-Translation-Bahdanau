@@ -23,6 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs")
     parser.add_argument("--vocab_source", type=str, default="train", help="Path to the vocabulary file")
     parser.add_argument("--load_last_model", action="store_true", default=True, help="Load the last model")
+    parser.add_argument("--encoder_decoder", action="store_true", default=True, help="Use the encoder-decoder model")
     args = parser.parse_args()
 
     # Load data
@@ -78,6 +79,7 @@ if __name__ == "__main__":
         rnn=config_rnn_decoder,
         output_nn=output_nn_cfg,
         embedding=decoder_embedding_cfg,
+        traditional = args.encoder_decoder,
     )
 
     # Define configuration for the encoder

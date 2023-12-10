@@ -90,7 +90,7 @@ class OutputNetwork(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, alignment: Dict[str, Any], rnn: Dict[str, Any], embedding: Dict[str, Any], output_nn: Dict[str, Any]) -> None:
+    def __init__(self, alignment: Dict[str, Any], rnn: Dict[str, Any], embedding: Dict[str, Any], output_nn: Dict[str, Any], traditional: bool = False) -> None:
         super().__init__()
 
         self.alignment = Alignment(**alignment)
@@ -102,7 +102,11 @@ class Decoder(nn.Module):
         )
         self.hidden_size = rnn["hidden_size"]
         self.output_nn = OutputNetwork(**output_nn)
-
+        self.traditional = traditional
+        self.relaxation_nn = FCNN(
+            input_size=rnn["hidden_size"],
+            output_size=output_nn["vocab_size"],
+        )
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         """
@@ -114,41 +118,48 @@ class Decoder(nn.Module):
         Returns:
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
+    
         # Initialize output tensor
         output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size).to(h.device)
 
-        # Initialize context vector
-        s_i = torch.zeros(
-            self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
-            h.size(0),
-            self.rnn.hidden_size,
-        ).to(h.device)
+        if not self.traditional:
 
-        h_emb = self.alignment.nn_h(h)
-        allignments = []
-        for i in range(h.size(1)):
-            # Compute the embedding of the current context vector
-            s_i_emb = self.alignment.nn_s(s_i.view(h.size(0), -1))
+            # Initialize context vector
+            s_i = torch.zeros(
+                self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
+                h.size(0),
+                self.rnn.hidden_size,
+            ).to(h.device)
 
-            # Compute alignment vector
-            a = self.alignment(s_i_emb, h_emb[:, i, :])
-            allignments.append(a)
-            # Apply softmax to obtain attention weights
-            e = F.softmax(a, dim=1)
+            h_emb = self.alignment.nn_h(h)
+            allignments = []
+            for i in range(h.size(1)):
+                # Compute the embedding of the current context vector
+                s_i_emb = self.alignment.nn_s(s_i.view(h.size(0), -1))
 
-            # Compute context vector
-            c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
+                # Compute alignment vector
+                a = self.alignment(s_i_emb, h_emb[:, i, :])
+                allignments.append(a)
+                # Apply softmax to obtain attention weights
+                e = F.softmax(a, dim=1)
 
-            # Compute output and update context vector
-            raw_y_i, s_i = self.rnn(c.unsqueeze(1), s_i)
+                # Compute context vector
+                c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
 
-            # Embed the output token
-            embed_y_i = self.embedding(raw_y_i.squeeze(1))
+                # Compute output and update context vector
+                raw_y_i, s_i = self.rnn(c.unsqueeze(1), s_i)
 
-            # Compute the output of the output network
-            output_network_out = self.output_nn(s_i.view(h.size(0), -1), embed_y_i.squeeze(1), c)
+                # Embed the output token
+                embed_y_i = self.embedding(raw_y_i.squeeze(1))
 
-            # Store the output in the output tensor
-            output[:, i, :] = output_network_out
+                # Compute the output of the output network
+                output_network_out = self.output_nn(s_i.view(h.size(0), -1), embed_y_i.squeeze(1), c)
 
-        return output, torch.stack(allignments, dim=1)
+                # Store the output in the output tensor
+                output[:, i, :] = output_network_out
+        else: 
+            output_rnn, hidden = self.rnn(h)
+            relaxed = self.relaxation_nn(output_rnn)
+            output[:,:,:] = relaxed  
+
+        return output, torch.stack(allignments, dim=1) if not self.traditional else torch.zeros(h.shape[0], h.shape[1], h.shape[1])
