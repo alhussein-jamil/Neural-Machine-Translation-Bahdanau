@@ -250,6 +250,8 @@ def load_data(
     word_count = load_from_disk(DATA_DIR / "processed_data/word_count{}".format(train_len))
 
     print("extracting word frequency")
+    if os.path.exists(DATA_DIR / "dictionaries/") == False:
+        os.mkdir(DATA_DIR / "dictionaries/")
     if vocab_source == "train":
         if not os.path.exists(DATA_DIR / "dictionaries/unigram_freq_en_{}.csv".format(train_len)):
             df_en, df_fr = extract_word_frequency(word_count)
