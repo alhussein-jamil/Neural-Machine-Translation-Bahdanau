@@ -154,6 +154,8 @@ def extract_word_frequency_dicho(data):
     return df_en, df_fr
 
 
+import string
+
 def extract_word_frequency(data):
     word_freq = {"en": Counter(), "fr": Counter()}
 
@@ -165,6 +167,8 @@ def extract_word_frequency(data):
                     x["count_{}_freq".format(lang)],
                 )
             )
+            # Exclude simple punctuation marks
+            word_freq_dict = {word: freq for word, freq in word_freq_dict.items() if word not in string.punctuation}
             word_freq[lang].update(word_freq_dict)
         print("Processed {} / {} samples".format(i + 1, len(data)), end="\r")
     df_en = pd.DataFrame(word_freq["en"].items(), columns=["word", "freq"])
@@ -274,7 +278,7 @@ def load_data(
     tokenized_most_frequent_french_words = mt_fr.tokenize(" ".join(most_frequent_french_words))[: ky - 1]
     tokenized_most_frequent_english_words.append("<unk>")
     tokenized_most_frequent_french_words.append("<unk>")
-
+    
     to_id_transform = toIdTransform(
         tokenized_most_frequent_english_words,
         tokenized_most_frequent_french_words,

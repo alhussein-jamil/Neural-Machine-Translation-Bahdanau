@@ -2,6 +2,7 @@ from typing import List
 
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 from metrics.losses import Loss
 from models.decoder import Decoder
@@ -34,6 +35,7 @@ class AlignAndTranslate(nn.Module):
         self.english_vocab = training_config.get("english_vocab", [])
         self.french_vocab = training_config.get("french_vocab", [])
         self.load_last_checkpoints = training_config.get("load_last_model", False)
+        self.beam_search_flag = training_config.get("beam_search", False)
         if self.load_last_checkpoints:
             self.load_last_model()
 
@@ -136,9 +138,10 @@ class AlignAndTranslate(nn.Module):
             loss = self.criterion(output, y.to(self.device)) 
             total_loss += loss.item()
             if i == 0:
-                prediction = output[0]
-                prediction[:, -1] = -float("inf")  # Prevent the model from predicting the unknown token
-                prediction_idx = self.beam_search_decoder(prediction, 5)
+                prediction = output[:4]
+                prediction[:,:,-2] = torch.min(prediction)
+                prediction_idx = self.beam_search(prediction, 3) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
+ 
                 sample = self.sample_translation(x[:4], prediction_idx, y[:4])
                 print(f"Source: {sample[0][0]}")
                 print(f"Prediction: {sample[1][0]}")
@@ -169,19 +172,46 @@ class AlignAndTranslate(nn.Module):
         phrase = phrase.replace("  ", " ")
         return phrase
 
-    def beam_search_decoder(self, data, k):
-        # Beam search decoder
-        sequences = [[list(), 0.0]]
-        for row in data:
-            all_candidates = list()
-            for i in range(len(sequences)):
-                seq, score = sequences[i]
-                for j in range(len(row)):
-                    candidate = [seq + [j], score - torch.log(row[j])]
-                    all_candidates.append(candidate)
-            ordered = sorted(all_candidates, key=lambda tup: tup[1])
-            sequences = ordered[:k]
-        return [torch.tensor(seq, dtype=torch.long) for seq, _ in sequences]
+    def beam_search(self, tensor, beam_size):
+        batch_size, len_seq, vocab_size = tensor.size()
+        device = tensor.device
+        # Initialize the beam search output tensor
+        output = torch.zeros(batch_size, len_seq, dtype=torch.long, device=device)
+
+        # Loop over each sequence in the batch
+        for b in range(batch_size):
+            # Initialize the beam search candidates
+            candidates = [(torch.tensor([], dtype=torch.long, device=device), 0)]
+
+            # Loop over each time step in the sequence
+            for t in range(len_seq):
+                # Get the scores for the next time step
+                scores = F.log_softmax(tensor[b, t], dim=-1)
+
+                # Generate new candidates by expanding the existing ones
+                new_candidates = []
+                for seq, score in candidates:
+                    for i in range(vocab_size):
+                        # Check if the new index is the same as the last index in the sequence
+                        if len(seq) > 0 and i == seq[-1]:
+                            continue
+
+                        new_seq = torch.cat([seq, torch.tensor([i], dtype=torch.long, device=device)])
+                        new_score = score + scores[i]
+                        new_candidates.append((new_seq, new_score))
+
+                # Select the top-k candidates based on the score
+                new_candidates = sorted(new_candidates, key=lambda x: x[1], reverse=True)[:beam_size]
+
+                # Update the candidates for the next time step
+                candidates = new_candidates
+            # Select the sequence with the highest score
+            best_seq, _ = max(candidates, key=lambda x: x[1])
+
+            # Store the best sequence in the output tensor
+            output[b] = best_seq
+
+        return output
 
     def plot_attention(self, source, prediction, allignments):
         source_list = [s.split(" ") for s in source]

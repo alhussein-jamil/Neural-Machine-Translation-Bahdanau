@@ -17,13 +17,14 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_size", "-n", type=int, default=256, help="Size of the hidden layers")
     parser.add_argument("--embedding_size", "-m", type=int, default=256, help="Size of the embedding")
     parser.add_argument("--max_out_units", "-l", type=int, default=64, help="Size of the hidden layers")
-    parser.add_argument("--vocab_size_en", type=int, default=2048, help="Size of the English vocabulary")
-    parser.add_argument("--vocab_size_fr", type=int, default=2048, help="Size of the French vocabulary")
+    parser.add_argument("--vocab_size_en", type=int, default=5000, help="Size of the English vocabulary")
+    parser.add_argument("--vocab_size_fr", type=int, default=5000, help="Size of the French vocabulary")
     parser.add_argument("--batch_size", type=int, default=64, help="Size of the batches")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs")
     parser.add_argument("--vocab_source", type=str, default="train", help="Path to the vocabulary file")
     parser.add_argument("--load_last_model", action="store_true", default=True, help="Load the last model")
-    parser.add_argument("--encoder_decoder", action="store_true", default=True, help="Use the encoder-decoder model")
+    parser.add_argument("--encoder_decoder", action="store_true", default=False, help="Use the encoder-decoder model")
+
     args = parser.parse_args()
 
     # Load data
@@ -100,6 +101,7 @@ if __name__ == "__main__":
         french_vocab=french_vocab,
         epochs=args.epochs,
         load_last_model=args.load_last_model,
+        beam_search = True,
     )
 
     # Define translator configuration
