@@ -198,16 +198,19 @@ def process_data(tokenized, Tx, kx, Ty, ky, idx_tensor_en, idx_tensor_fr):
             idx_tensor_fr[i] = torch.tensor(pad_to_length(x["ids_fr"], Ty, ky))
 
 
-def pad_multiprocess(data, idx_en, idx_fr, Tx, Ty, kx, ky):
-    jobs = []
-    for i in range(n_processors):
-        start, end = i * len(data) // n_processors, (i + 1) * len(data) // n_processors
-        p = Process(target=process_data, args=(data.select(list(range(start, end))), Tx, kx, Ty, ky, idx_en[start:end], idx_fr[start:end]))
-        jobs.append(p)
-        p.start()
-    for proc in jobs:
-        proc.join()
-            
+def pad_multiprocess(data, idx_en, idx_fr, Tx, Ty, kx, ky, multiprocess = True):
+    if multiprocess == True:
+        jobs = []
+        for i in range(n_processors):
+            start, end = i * len(data) // n_processors, (i + 1) * len(data) // n_processors
+            p = Process(target=process_data, args=(data.select(list(range(start, end))), Tx, kx, Ty, ky, idx_en[start:end], idx_fr[start:end]))
+            jobs.append(p)
+            p.start()
+        for proc in jobs:
+            proc.join()
+    else:
+        process_data(data, Tx, kx, Ty, ky, idx_en, idx_fr)
+
 
 # import autotokenizer
 def load_data(
