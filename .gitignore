@@ -1,10 +1,6 @@
-plots/
 *egg-info
 *cpython*
 *__pycache__*
-data/t*
 *cache*
-*data/*
-*.pth
+*data/local_data
 *.ipynb
-!data/dictionaries/unigram_frq_*_ext.csv

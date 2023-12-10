@@ -8,7 +8,7 @@ import torch
 from datasets import load_dataset, load_from_disk
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch.utils.data import Dataset
-from global_variables import DATA_DIR   
+from global_variables import DATA_DIR, EXT_DATA_DIR
 
 n_processors = cpu_count()
 
@@ -259,8 +259,8 @@ def load_data(
         df_fr = pd.read_csv(DATA_DIR / "dictionaries/unigram_freq_fr_{}.csv".format(train_len))
         bow_english, bow_french = df_en, df_fr
     else:
-        bow_english = pd.read_csv(DATA_DIR / "dictionaries/unigram_freq_en_ext.csv")
-        bow_french = pd.read_csv(DATA_DIR / "dictionaries/unigram_freq_fr_ext.csv")
+        bow_english = pd.read_csv(EXT_DATA_DIR / "dictionaries/unigram_freq_en_ext.csv")
+        bow_french = pd.read_csv(EXT_DATA_DIR / "dictionaries/unigram_freq_fr_ext.csv")
     print("done extraction")
     bow_english = bow_english[:kx]
     bow_french = bow_french[:ky]
@@ -280,17 +280,17 @@ def load_data(
     )
 
     # Convert tokenized sentences to word IDs and save train data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky)):
+    if not os.path.exists(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source)):
         tokenized_train_data = tokenized_train_data.map(to_id_transform, batched=False, num_proc=n_processors)
-        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
+        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source))
 
     # Convert tokenized sentences to word IDs and save validation data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky)):
+    if not os.path.exists(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source)):
         tokenized_val_data = tokenized_val_data.map(to_id_transform, batched=False, num_proc=n_processors)
-        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
+        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source))
 
-    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}".format(train_len, kx, ky))
-    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}".format(val_len, kx, ky))
+    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source))
+    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source))
 
     # Helper function to pad sequences to a specified length
     def pad_to_length(x, length, pad_value):
