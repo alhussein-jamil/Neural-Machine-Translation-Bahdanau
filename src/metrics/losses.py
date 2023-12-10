@@ -15,8 +15,9 @@ class Loss(nn.Module):
             losses = self.loss_fn(x, y_idx)
         elif isinstance(self.loss_fn, nn.NLLLoss):
             _, _, vocab_size = x.shape
-            x = torch.log(x)
             x = x.view(-1, vocab_size)
+            #apply softmax to x 
+            x = F.log_softmax(x, dim=1)
             y = y.view(-1).long()
             losses = self.loss_fn(x, y)
         else:

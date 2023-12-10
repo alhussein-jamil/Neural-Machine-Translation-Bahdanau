@@ -13,13 +13,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train_len",
         type=int,
-        default=100000,
+        default=10000,
         help="Number of training examples",
     )
     parser.add_argument(
         "--val_len",
         type=int,
-        default=None,
+        default=1000,
         help="Number of validation examples",
     )
     parser.add_argument("--Tx", type=int, default=7, help="Length of the input sequence")
@@ -28,33 +28,33 @@ if __name__ == "__main__":
         "--hidden_size",
         "-n",
         type=int,
-        default=1000,
+        default=100,
         help="Size of the hidden layers",
     )
     parser.add_argument(
         "--embedding_size",
         "-m",
         type=int,
-        default=620,
+        default=62,
         help="Size of the embedding",
     )
     parser.add_argument(
         "--max_out_units",
         "-l",
         type=int,
-        default=500,
+        default=50,
         help="Size of the hidden layers",
     )
     parser.add_argument(
         "--vocab_size_en",
         type=int,
-        default=30000,
+        default=500,
         help="Size of the English vocabulary",
     )
     parser.add_argument(
         "--vocab_size_fr",
         type=int,
-        default=30000,
+        default=500,
         help="Size of the French vocabulary",
     )
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
         output_vocab_size=len(french_vocab) + 1,
         english_vocab=english_vocab,
         french_vocab=french_vocab,
-        epochs=10,
+        epochs=1000,
     )
 
     # Define translator configuration

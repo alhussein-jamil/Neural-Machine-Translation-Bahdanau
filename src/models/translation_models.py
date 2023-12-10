@@ -1,43 +1,24 @@
 from typing import List
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 from metrics.losses import Loss
 from models.decoder import Decoder
 from models.encoder import Encoder
 
-# class Loss(nn.Module):
-#     def __init__(self, loss_fn) -> None:
-#         super().__init__()
-#         self.loss_fn = loss_fn
-
-#     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-#         """
-#             x of shape (batch_size, sequence_length, vocab_size)
-#             y of shape (batch_size, sequence_length)
-#         """
-
-#         y = y.long()
-
-#         y_idx = F.one_hot(y, num_classes=x.shape[-1]).float()
-
-#         losses = self.loss_fn(x, y_idx)
-
-#         return losses.mean()
-
-
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
+
+        # Initialize encoder and decoder
         self.encoder = Encoder(**kwargs.get("encoder", {}))
         self.decoder = Decoder(**kwargs.get("decoder", {}))
 
+        # Training configuration
         training_config = kwargs.get("training", {})
-
-        self.criterion = training_config.get("criterion", Loss(nn.CrossEntropyLoss(reduction="sum")))
-        self.optimizer = training_config.get("optimizer", torch.optim.Adam(self.parameters(), lr=1e-4))
+        self.criterion = training_config.get("criterion", Loss(nn.NLLLoss(reduction="sum")))
+        self.optimizer = training_config.get("optimizer", torch.optim.Adam(self.parameters()))
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
         self.batch_size = training_config.get("batch_size", 32)
@@ -51,11 +32,13 @@ class AlignAndTranslate(nn.Module):
         self.french_vocab = training_config.get("french_vocab", [])
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Forward pass through encoder and decoder
         encoder_output, _ = self.encoder(x)
         decoder_output = self.decoder(encoder_output)
         return decoder_output
 
     def train_step(self, x: torch.Tensor, y: torch.Tensor) -> float:
+        # Training step
         self.optimizer.zero_grad()
         output = self.forward(x.to(self.device))
         loss = self.criterion(output, y) / self.batch_size
@@ -64,10 +47,12 @@ class AlignAndTranslate(nn.Module):
         return loss.item()
 
     def save_model(self, path: str) -> None:
+        # Save model
         torch.save(self.state_dict(), path)
         print(f"Model saved at {path}")
 
     def train(self, train_loader, val_loader) -> None:
+        # Training loop
         for epoch in range(self.epochs):
             for i, train_sample in enumerate(train_loader):
                 x, y = (
@@ -84,36 +69,31 @@ class AlignAndTranslate(nn.Module):
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
 
-            for i, val_sample in enumerate(val_loader):
-                x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
-                prediction = self.forward(x[0].unsqueeze(0).to(self.device)).squeeze(0)
-                prediction_idx = torch.argmax(prediction, dim=1)
-                print(prediction_idx)
-                sample = self.sample_translation(x[0], prediction_idx, y[0])
-                break
-            print(f"Source: {sample[0]}")
-            print(f"Prediction: {sample[1]}")
-            print(f"Translation: {sample[2]}")
-
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
                 self.save_model(self.best_model)
 
     def evaluate(self, val_loader) -> float:
+        # Evaluation function
         total_loss = 0
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output = self.forward(x.to(self.device))
             loss = self.criterion(output, y.to(self.device)) / self.batch_size
             total_loss += loss.item()
+            if i == 0:
+                prediction = output[0]
+                prediction[:, -1] = -float("inf")  # Prevent the model from predicting the unknown token
+                prediction_idx = self.beam_search_decoder(prediction, 5)
+                sample = self.sample_translation(x[0], prediction_idx, y[0])
+                print(f"Source: {sample[0]}")
+                print(f"Prediction: {sample[1]}")
+                print(f"Translation: {sample[2]}")
+
         return total_loss / len(val_loader)
 
     def sample_translation(self, source, prediction, translation):
-        """
-        Sample a translation from the model.
-        given the indicies of the prediction and the vocab, return the sentence
-
-        """
+        # Sample a translation from the model
         source_sentence = self.idx_to_word(source, self.english_vocab)
         prediction_sentence = self.idx_to_word(prediction, self.french_vocab)
         translation_sentence = self.idx_to_word(translation, self.french_vocab)
@@ -121,7 +101,22 @@ class AlignAndTranslate(nn.Module):
         return source_sentence, prediction_sentence, translation_sentence
 
     def idx_to_word(self, idx: torch.Tensor, vocab: List):
+        # Convert index to word
         idx = idx.cpu().detach().numpy()
         phrase = " ".join(list(vocab[idx[(idx < len(vocab))]]))
         phrase = phrase.replace("  ", " ")
         return phrase
+
+    def beam_search_decoder(self, data, k):
+        # Beam search decoder
+        sequences = [[list(), 0.0]]
+        for row in data:
+            all_candidates = list()
+            for i in range(len(sequences)):
+                seq, score = sequences[i]
+                for j in range(len(row)):
+                    candidate = [seq + [j], score - torch.log(row[j])]
+                    all_candidates.append(candidate)
+            ordered = sorted(all_candidates, key=lambda tup: tup[1])
+            sequences = ordered[:k]
+        return torch.tensor(sequences[0][0], dtype=torch.long)

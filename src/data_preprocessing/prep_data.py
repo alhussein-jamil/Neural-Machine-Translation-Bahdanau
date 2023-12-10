@@ -269,8 +269,8 @@ def load_data(
     most_frequent_french_words = bow_french["word"].apply(lambda x: str(x)).tolist()
     tokenized_most_frequent_english_words = mt_en.tokenize(" ".join(most_frequent_english_words))[: kx - 1]
     tokenized_most_frequent_french_words = mt_fr.tokenize(" ".join(most_frequent_french_words))[: ky - 1]
-    tokenized_most_frequent_english_words.append("")
-    tokenized_most_frequent_french_words.append("")
+    tokenized_most_frequent_english_words.append("<unk>")
+    tokenized_most_frequent_french_words.append("<unk>")
 
     to_id_transform = toIdTransform(
         tokenized_most_frequent_english_words,
