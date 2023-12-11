@@ -27,7 +27,8 @@ if __name__ == "__main__":
     parser.add_argument("--config_file", type=str, default="translation_config.yaml", help="Path to the config file")
     parser.add_argument("--ignore_config", action="store_true", default=False, help="Ignore the config file")
     args = parser.parse_args()
-
+    device = "cpu" if not torch.cuda.is_available() else "cuda"
+    print(f"Using {device} device")
     # Load YAML config file
     with open(args.config_file, "r") as config_file:
         config = yaml.safe_load(config_file)
@@ -52,9 +53,8 @@ if __name__ == "__main__":
         Ty=config['Ty'],
         batch_size=config['batch_size'],
         vocab_source=config['vocab_source'],
-        mp=True,
+        mp=config["multiprocessing"]
     )
-    device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     # Define configuration for the decoder
     config_rnn_decoder = dict(

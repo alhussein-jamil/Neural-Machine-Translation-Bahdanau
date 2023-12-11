@@ -14,7 +14,7 @@ import os
 from utils.plotting import * 
 from global_variables import DATA_DIR
 
-from sacremoses import MosesTokenizer, MosesDetokenizer
+from sacremoses import MosesDetokenizer
 
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -142,17 +142,18 @@ class AlignAndTranslate(nn.Module):
             if i == 0:
                 prediction = output[:4]
                 prediction[:,:,-2] = torch.min(prediction) # set the <unk> token to the minimum value so that it is not selected
-                prediction_idx = self.beam_search(prediction, 3) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
+                prediction_idx = self.beam_search(prediction, 50) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
 
                 sample = self.sample_translation(x[:4], prediction_idx, y[:4])
-
-                output_text = f"\tSource: {sample[0][0]}\n"
-                output_text += f"\tPrediction: {sample[1][0]}\n"
-                output_text += f"\tTranslation: {sample[2][0]}\n"
-                
+                translations = ""
+                for s in range(4):
+                    translations += f"\tSource: {sample[0][s]}\n"
+                    translations += f"\tPrediction: {sample[1][s]}\n"
+                    translations += f"\tTranslation: {sample[2][s]}\n"
+                    translations += "\n"   
                 with open(DATA_DIR / f"outputs/outputs_{self.timestamp}.txt", "w") as myfile:
-                    myfile.write(output_text)
-                print(output_text)
+                    myfile.write(translations)
+                print(translations)
                 self.plot_attention(sample[0], sample[1], allignments[:4])
         return total_loss / len(val_loader)
 
