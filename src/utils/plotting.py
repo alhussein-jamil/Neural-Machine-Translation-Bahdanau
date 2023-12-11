@@ -39,6 +39,9 @@ def plot_alignment(
 
         # Get the current subplot
         ax = axes[i // 2, i % 2]
+        
+        #make allignment values between 0 and 1 with 1 being the max value
+        alignment = (alignment - np.min(alignment))/(np.max(alignment) - np.min(alignment))
 
         # Plot the alignment matrix
         ax.imshow(alignment, cmap="gray", aspect="auto")  # Set aspect to "auto" to fill the entire width
@@ -47,7 +50,7 @@ def plot_alignment(
         ax.set_xticks(np.arange(len(phrase1)))
         ax.set_yticks(np.arange(len(phrase2)))
         ax.xaxis.tick_top()
-        ax.set_xticklabels(phrase1)
+        ax.set_xticklabels(phrase1, rotation=90)  # Rotate the text at the top by 90 degrees
         ax.set_yticklabels(phrase2)
 
         # Set title for the subplot

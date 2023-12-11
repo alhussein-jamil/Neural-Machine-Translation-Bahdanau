@@ -136,13 +136,12 @@ class AlignAndTranslate(nn.Module):
         total_loss = 0
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
-            x_sentences, y_sentences = val_sample["english"]["sentences"], val_sample["french"]["sentences"]
             output, allignments= self.forward(x.to(self.device), validation=True)
             loss = self.criterion(output, y.to(self.device)) 
             total_loss += loss.item()
             if i == 0:
                 prediction = output[:4]
-                prediction[:,:,-2] = torch.min(prediction)
+                prediction[:,:,-2] = torch.min(prediction) # set the <unk> token to the minimum value so that it is not selected
                 prediction_idx = self.beam_search(prediction, 3) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
 
                 sample = self.sample_translation(x[:4], prediction_idx, y[:4])
@@ -184,44 +183,51 @@ class AlignAndTranslate(nn.Module):
         return phrase
 
     def beam_search(self, tensor, beam_size):
-        batch_size, len_seq, vocab_size = tensor.size()
+        batch_size, len_seq, _ = tensor.size()
         device = tensor.device
+        
         # Initialize the beam search output tensor
         output = torch.zeros(batch_size, len_seq, dtype=torch.long, device=device)
-
+        
         # Loop over each sequence in the batch
         for b in range(batch_size):
             # Initialize the beam search candidates
             candidates = [(torch.tensor([], dtype=torch.long, device=device), 0)]
-
+            
             # Loop over each time step in the sequence
             for t in range(len_seq):
                 # Get the scores for the next time step
                 scores = F.log_softmax(tensor[b, t], dim=-1)
-
+                
                 # Generate new candidates by expanding the existing ones
                 new_candidates = []
                 for seq, score in candidates:
-                    for i in range(vocab_size):
+                    # Calculate the cumulative scores for all words in the candidate sequence
+                    cumulative_scores = score + scores
+                    
+                    # Find the top-k candidates based on the cumulative scores
+                    top_k_indices = torch.topk(cumulative_scores, beam_size).indices
+                    for i in top_k_indices:
                         # Check if the new index is the same as the last index in the sequence
                         if len(seq) > 0 and i == seq[-1]:
                             continue
-
+                        
                         new_seq = torch.cat([seq, torch.tensor([i], dtype=torch.long, device=device)])
-                        new_score = score + scores[i]
+                        new_score = cumulative_scores[i]
                         new_candidates.append((new_seq, new_score))
-
-                # Select the top-k candidates based on the score
+                
+                # Select the top-k candidates from all expanded candidates
                 new_candidates = sorted(new_candidates, key=lambda x: x[1], reverse=True)[:beam_size]
-
+                
                 # Update the candidates for the next time step
                 candidates = new_candidates
+            
             # Select the sequence with the highest score
             best_seq, _ = max(candidates, key=lambda x: x[1])
-
+            
             # Store the best sequence in the output tensor
             output[b] = best_seq
-
+        
         return output
 
     def plot_attention(self, source, prediction, allignments):

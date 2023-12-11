@@ -4,13 +4,13 @@ import torch
 
 from models.translation_models import AlignAndTranslate
 from src.data_preprocessing import load_data
-
+import yaml
 # Define command-line arguments
 parser = argparse.ArgumentParser()
 
 if __name__ == "__main__":
     # Parse command-line arguments
-    parser.add_argument("--train_len", type=int, default=30000, help="Number of training examples")
+    parser.add_argument("--train_len", type=int, default=100000, help="Number of training examples")
     parser.add_argument("--val_len", type=int, default=None, help="Number of validation examples")
     parser.add_argument("--Tx", type=int, default=10, help="Length of the input sequence")
     parser.add_argument("--Ty", type=int, default=10, help="Length of the output sequence")
@@ -24,8 +24,19 @@ if __name__ == "__main__":
     parser.add_argument("--vocab_source", type=str, default="train", help="Path to the vocabulary file")
     parser.add_argument("--load_last_model", action="store_true", default=True, help="Load the last model")
     parser.add_argument("--encoder_decoder", action="store_true", default=False, help="Use the encoder-decoder model")
-
+    parser.add_argument("--config_file", type=str, default="translation_config.yaml", help="Path to the config file")
+    parser.add_argument("--ignore_config", action="store_true", default=False, help="Ignore the config file")
     args = parser.parse_args()
+
+    # Load YAML config file
+    with open(args.config_file, "r") as config_file:
+        config = yaml.safe_load(config_file)
+
+    if args.ignore_config:
+        # Override config values with command-line arguments
+        for arg in vars(args):
+            if getattr(args, arg) is not None:
+                config[arg] = getattr(args, arg)
 
     # Load data
     (
@@ -33,23 +44,22 @@ if __name__ == "__main__":
         (val_data, val_dataloader),
         (english_vocab, french_vocab),
     ) = load_data(
-        train_len=args.train_len,
-        val_len=args.val_len,
-        kx=args.vocab_size_en,
-        ky=args.vocab_size_fr,
-        Tx=args.Tx,
-        Ty=args.Ty,
-        batch_size=args.batch_size,
-        vocab_source=args.vocab_source,
-        mp = True,
+        train_len=config['train_len'],
+        val_len=config['val_len'],
+        kx=config['vocab_size_en'],
+        ky=config['vocab_size_fr'],
+        Tx=config['Tx'],
+        Ty=config['Ty'],
+        batch_size=config['batch_size'],
+        vocab_source=config['vocab_source'],
+        mp=True,
     )
-
     device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     # Define configuration for the decoder
     config_rnn_decoder = dict(
-        input_size=args.hidden_size * 2,
-        hidden_size=args.hidden_size,
+        input_size=config["hidden_size"] * 2,
+        hidden_size=config["hidden_size"],
         num_layers=1,
         device=device,
         dropout=0,
@@ -58,21 +68,21 @@ if __name__ == "__main__":
     )
 
     alignment_cfg = dict(
-        input_size=args.hidden_size * 3,
-        output_size=args.Ty,
+        input_size=config["hidden_size"] * 3,
+        output_size=config["Tx"],
         device=device,
     )
 
     output_nn_cfg = dict(
-        embedding_size=args.embedding_size,
-        max_out_units=args.max_out_units,
-        hidden_size=args.hidden_size,
+        embedding_size=config["embedding_size"],
+        max_out_units=config["max_out_units"],
+        hidden_size=config["hidden_size"],
         vocab_size=len(french_vocab) + 1,
         device=device,
     )
 
     decoder_embedding_cfg = dict(
-        embedding_size=args.embedding_size,
+        embedding_size=config["embedding_size"],
         device=device,
     )
 
@@ -81,17 +91,17 @@ if __name__ == "__main__":
         rnn=config_rnn_decoder,
         output_nn=output_nn_cfg,
         embedding=decoder_embedding_cfg,
-        traditional = args.encoder_decoder,
+        traditional = config["encoder_decoder"],
     )
 
     # Define configuration for the encoder
     config_encoder = dict(
-        rnn_hidden_size=args.hidden_size,
+        rnn_hidden_size=config["hidden_size"],
         rnn_num_layers=1,
         rnn_device=device,
         vocab_size=len(english_vocab) + 1,
         rnn_type="GRU",
-        embedding_size=args.embedding_size,
+        embedding_size=config["embedding_size"],
     )
 
     # Define training configuration
@@ -100,8 +110,8 @@ if __name__ == "__main__":
         output_vocab_size=len(french_vocab) + 1,
         english_vocab=english_vocab,
         french_vocab=french_vocab,
-        epochs=args.epochs,
-        load_last_model=args.load_last_model,
+        epochs=config["epochs"],
+        load_last_model=config["load_last_model"],
         beam_search = True,
     )
 
