@@ -64,6 +64,7 @@ class OutputNetwork(nn.Module):
             input_size=max_out_units,
             output_size=vocab_size,
             device=device,
+    
         )
         self.output_size = vocab_size
 
@@ -97,6 +98,7 @@ class Decoder(nn.Module):
             input_size=rnn["hidden_size"],
             output_size=embedding["embedding_size"],
             device=embedding["device"],
+            bias=False,
         )
         self.hidden_size = rnn["hidden_size"]
         self.output_nn = OutputNetwork(**output_nn)
@@ -104,6 +106,7 @@ class Decoder(nn.Module):
         self.relaxation_nn = FCNN(
             input_size=rnn["hidden_size"],
             output_size=output_nn["vocab_size"],
+            bias = False
         )
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:

@@ -15,6 +15,7 @@ class FCNN(nn.Module):
         activation: nn.Module = nn.Tanh(),
         last_layer_activation: nn.Module = nn.Identity(),
         dropout: float = 0,
+        bias: bool = True
     ):
         super(FCNN, self).__init__()
 
@@ -32,16 +33,17 @@ class FCNN(nn.Module):
             nn.Linear(
                 self.input_size,
                 self.hidden_sizes[0] if len(self.hidden_sizes) > 0 else self.output_size,
+                bias = bias
             )
         )
 
         # Add the remaining fully-connected layers
         for i in range(1, len(self.hidden_sizes)):
-            self.fc.append(nn.Linear(self.hidden_sizes[i - 1], self.hidden_sizes[i]))
+            self.fc.append(nn.Linear(self.hidden_sizes[i - 1], self.hidden_sizes[i], bias = bias))
 
         if len(self.hidden_sizes) > 0:
             # Add the final fully-connected layer
-            self.fc.append(nn.Linear(self.hidden_sizes[-1], self.output_size))
+            self.fc.append(nn.Linear(self.hidden_sizes[-1], self.output_size, bias= bias))
 
         self.fc = self.fc.to(self.device)
 

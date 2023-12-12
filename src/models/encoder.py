@@ -34,6 +34,7 @@ class Encoder(nn.Module):
             activation=nn.Tanh(),
             last_layer_activation=nn.Identity(),
             dropout=0,
+            bias = False,
         )
 
     def forward(self, x):
