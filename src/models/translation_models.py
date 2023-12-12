@@ -40,7 +40,8 @@ class AlignAndTranslate(nn.Module):
         self.beam_search_flag = training_config.get("beam_search", False)
         self.start_time = self.timestamp
         
-        self.losses = []
+        self.train_losses = []
+        self.val_losses = [1e10]
         self.local_dir = DATA_DIR / ("trained_models/" + self.start_time)
         self.models_dir = self.local_dir / "checkpoints/"
         self.best_models_dir = self.local_dir / "best_models/"
@@ -88,14 +89,7 @@ class AlignAndTranslate(nn.Module):
         save_path = os.path.join(save_dir, "model.pth")
         torch.save(self.state_dict(), save_path)
         print(f"Model saved at {save_path}")
-        
-        new = True
-        if os.path.exists(self.output_dir / "losses.txt"):  
-            new = False
-        
-        with open(self.output_dir / "losses.txt", "a" if not new else "w", encoding="utf-8") as myfile:
-            for loss in self.losses:
-                myfile.write("{}\n".format(loss))
+
 
     def load_model(self, path: str) -> None:
         # Check compatibility
@@ -120,6 +114,7 @@ class AlignAndTranslate(nn.Module):
     def train(self, train_loader, val_loader) -> None:
         # Training loop
         for epoch in range(self.epochs):
+            losses = []
             for i, train_sample in enumerate(train_loader):
                 x, y = (
                     train_sample["english"]["idx"],
@@ -128,16 +123,26 @@ class AlignAndTranslate(nn.Module):
                 x = x.to(self.device)
                 y = y.to(self.device)
                 loss, output, allignments= self.train_step(x, y)
-                self.losses.append(loss)
+                losses.append(loss)
+                
                 if i % self.print_every == 0:
                     print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}")
                     #add losses to a text file
                 if i % self.save_every == 0:
                     self.save_model()
+
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
+                self.val_losses.append(val_loss)
                 self.display(output, allignments, x, y, val=False)
-
+                print(f"Epoch: {epoch}, Validation Loss: {val_loss}")
+            self.train_losses.append(sum(losses) / len(losses))
+            new = True
+            if os.path.exists(self.output_dir / "losses.txt"):  
+                new = False
+        
+            with open(self.output_dir / "losses.txt", "a" if not new else "w", encoding="utf-8") as myfile:
+                myfile.write("{} {}\n".format(self.train_losses[-1], self.val_losses[-1]))
 
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
@@ -232,13 +237,11 @@ class AlignAndTranslate(nn.Module):
                     top_k_indices = torch.topk(cumulative_scores, beam_size).indices
                     for i in top_k_indices:
                         # Check if the new index is the same as the last index in the sequence
-                        if len(seq) > 0 and i == seq[-1]:
-                            continue
-                            # decrease the probability of this index by adding a large negative number
-                            indx_in_the_seq = torch.where(seq == i)[0][0]
-
-                            new_score = cumulative_scores[i] - 10
-                        
+                        if len(seq) > 0 and i in seq: 
+                            # decrease the distance proportionally to the index distance
+                            inverse_distance = 1 - (len(seq) - torch.where(seq == i)[-1] - 1 ) / len(seq)
+                            
+                            new_score = cumulative_scores[i] - 10 * inverse_distance * (cumulative_scores[i] - torch.min(cumulative_scores))                    
                         new_seq = torch.cat([seq, torch.tensor([i], dtype=torch.long, device=device)])
                         new_score = cumulative_scores[i]
                         new_candidates.append((new_seq, new_score))
