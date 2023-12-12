@@ -130,6 +130,8 @@ class Decoder(nn.Module):
             ).to(h.device)
             torch.nn.init.xavier_uniform_(s_i)
 
+            embed_y_i = torch.zeros(h.size(0), self.embedding.output_size).to(h.device)
+
             h_emb = self.alignment.nn_h(h)
             allignments = []
             for i in range(h.size(1)):
@@ -146,7 +148,7 @@ class Decoder(nn.Module):
                 c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
 
                 # Compute output and update context vector
-                raw_y_i, s_i = self.rnn(c.unsqueeze(1), s_i)
+                raw_y_i, s_i = self.rnn(torch.cat((embed_y_i.unsqueeze(1), c.unsqueeze(1)), dim=2), s_i)
 
                 # Embed the output token
                 embed_y_i = self.embedding(raw_y_i.squeeze(1))

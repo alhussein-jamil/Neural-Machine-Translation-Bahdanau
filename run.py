@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     # Define configuration for the decoder
     config_rnn_decoder = dict(
-        input_size=config["hidden_size"] * 2,
+        input_size=config["hidden_size"] * 2 + config["embedding_size"],
         hidden_size=config["hidden_size"],
         num_layers=1,
         device=device,

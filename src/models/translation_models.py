@@ -232,7 +232,7 @@ class AlignAndTranslate(nn.Module):
                     top_k_indices = torch.topk(cumulative_scores, beam_size).indices
                     for i in top_k_indices:
                         # Check if the new index is the same as the last index in the sequence
-                        if len(seq) > 0 and i in seq:
+                        if len(seq) > 0 and i == seq[-1]:
                             continue
                             # decrease the probability of this index by adding a large negative number
                             indx_in_the_seq = torch.where(seq == i)[0][0]
