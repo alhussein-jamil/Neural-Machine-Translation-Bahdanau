@@ -170,7 +170,8 @@ def extract_word_frequency(data):
             # Exclude simple punctuation marks
             word_freq_dict = {word: freq for word, freq in word_freq_dict.items() if word not in string.punctuation}
             word_freq[lang].update(word_freq_dict)
-        print("Processed {} / {} samples".format(i + 1, len(data)), end="\r")
+        if (i / len(data)) % 0.1 == 0:
+            print("Processed {} / {} samples".format(i + 1, len(data)), end="\r")
     df_en = pd.DataFrame(word_freq["en"].items(), columns=["word", "freq"])
     df_fr = pd.DataFrame(word_freq["fr"].items(), columns=["word", "freq"])
 

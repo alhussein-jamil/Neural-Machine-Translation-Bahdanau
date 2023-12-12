@@ -38,13 +38,24 @@ class AlignAndTranslate(nn.Module):
         self.french_vocab = training_config.get("french_vocab", [])
         self.load_last_checkpoints = training_config.get("load_last_model", False)
         self.beam_search_flag = training_config.get("beam_search", False)
+        self.start_time = self.timestamp
+        
+        self.losses = []
+        self.local_dir = DATA_DIR / ("trained_models/" + self.start_time)
+        self.models_dir = self.local_dir / "checkpoints/"
+        self.best_models_dir = self.local_dir / "best_models/"
+        self.output_dir = self.local_dir / "outputs/"   
+        self.plot_dir = self.local_dir / "plots/"
+
+        os.makedirs(DATA_DIR / "trained_models/", exist_ok=True)
+        os.makedirs(self.local_dir, exist_ok=True)
+        os.makedirs(self.models_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self.best_models_dir, exist_ok=True)
+        os.makedirs(self.plot_dir, exist_ok=True)
+
         if self.load_last_checkpoints:
             self.load_last_model()
-
-        self.losses = []
-        if not os.path.exists(DATA_DIR / f"outputs/"):
-            os.makedirs(DATA_DIR / f"outputs/")
-
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Forward pass through encoder and decoder
@@ -66,21 +77,23 @@ class AlignAndTranslate(nn.Module):
         self.optimizer.step()
         return loss.item(), output, allignments
 
-    def save_model(self, directory: str = "checkpoints/") -> None:
-        
-        directory = os.path.join(DATA_DIR, directory)
+    def save_model(self, best: bool = False) -> None:
+
 
         # Create a directory with timestamp
-        save_dir = os.path.join(directory, self.timestamp)
-        os.makedirs(directory, exist_ok=True)
+        save_dir = os.path.join(self.models_dir if not best else self.best_models_dir, self.timestamp)
         os.makedirs(save_dir, exist_ok=True)
 
         # Save model
         save_path = os.path.join(save_dir, "model.pth")
         torch.save(self.state_dict(), save_path)
         print(f"Model saved at {save_path}")
-        with open(save_dir + "/losses.txt", "w") as myfile:
-            myfile.write("{}\n".format(self.timestamp))
+        
+        new = True
+        if os.path.exists(self.output_dir / "losses.txt"):  
+            new = False
+        
+        with open(self.output_dir / "losses.txt", "a" if not new else "w", encoding="utf-8") as myfile:
             for loss in self.losses:
                 myfile.write("{}\n".format(loss))
 
@@ -93,19 +106,16 @@ class AlignAndTranslate(nn.Module):
         except RuntimeError as e:
             print(f"Failed to load model from {path}: {str(e)}")
     
-    def load_last_model(self, directory: str = "best_models/") -> None:
-        directory = os.path.join(DATA_DIR, directory)
+    def load_last_model(self) -> None:
         # Load last model
         try:
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            if not os.listdir(directory):
-                print(f"No model found in {directory}")
+            if not os.listdir(self.best_models_dir):
+                print(f"No model found in {self.best_models_dir}")
                 return
-            last_model = sorted(os.listdir(directory))[-1]
-            self.load_model(os.path.join(directory, last_model, "model.pth"))
+            last_model = sorted(os.listdir(self.best_models_dir))[-1]
+            self.load_model(os.path.join(self.best_models_dir, last_model))
         except IndexError:
-            print(f"No model found in {directory}")
+            print(f"No model found in {self.best_models_dir}")
 
     def train(self, train_loader, val_loader) -> None:
         # Training loop
@@ -123,7 +133,7 @@ class AlignAndTranslate(nn.Module):
                     print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}")
                     #add losses to a text file
                 if i % self.save_every == 0:
-                    self.save_model( "checkpoints/")
+                    self.save_model()
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
                 self.display(output, allignments, x, y, val=False)
@@ -131,14 +141,14 @@ class AlignAndTranslate(nn.Module):
 
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
-                self.save_model("best_models/")
+                self.save_model(best=True)
 
 
 
     def display(self,output:torch.tensor, allignments:torch.tensor, x:torch.tensor, y:torch.tensor, val : bool = True):
             prediction = output[:4]
             prediction[:,:,-2] = torch.min(prediction) # set the <unk> token to the minimum value so that it is not selected
-            prediction_idx = self.beam_search(prediction, 10) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
+            prediction_idx = self.beam_search(prediction, 30) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
 
             sample = self.sample_translation(x[:4], prediction_idx, y[:4])
             name = "Validation" if val else "Training"
@@ -148,8 +158,8 @@ class AlignAndTranslate(nn.Module):
                 translations += f"\tPrediction: {sample[1][s]}\n"
                 translations += f"\tTranslation: {sample[2][s]}\n"
                 translations += "\n"   
-            with open(DATA_DIR / f"outputs/outputs_{self.timestamp}_{name}.txt", "w") as myfile:
-                myfile.write(translations, encoding="utf-8")
+            with open(self.output_dir / (self.timestamp + ".txt"), "a", encoding="utf-8") as myfile:
+                myfile.write(translations)
             print(translations)
             if val:
                 self.plot_attention(sample[0], sample[1], allignments[:4])
@@ -222,8 +232,12 @@ class AlignAndTranslate(nn.Module):
                     top_k_indices = torch.topk(cumulative_scores, beam_size).indices
                     for i in top_k_indices:
                         # Check if the new index is the same as the last index in the sequence
-                        if len(seq) > 0 and i == seq[-1]:
+                        if len(seq) > 0 and i in seq:
                             continue
+                            # decrease the probability of this index by adding a large negative number
+                            indx_in_the_seq = torch.where(seq == i)[0][0]
+
+                            new_score = cumulative_scores[i] - 10
                         
                         new_seq = torch.cat([seq, torch.tensor([i], dtype=torch.long, device=device)])
                         new_score = cumulative_scores[i]
@@ -255,4 +269,4 @@ class AlignAndTranslate(nn.Module):
         data = {
             f"phrase {i}": (source_list[i], prediction_list[i], alls[i]) for i in range(len(source_list))
         }
-        plot_alignment(data, save_path=f"alignment_{self.timestamp}.png")
+        plot_alignment(data, save_path=self.plot_dir / (self.timestamp + ".png"))

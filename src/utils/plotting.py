@@ -58,11 +58,7 @@ def plot_alignment(
 
     # Save or display the plot
     if save_path:
-        save_dir = "plots"
-        save_dir = os.path.join(DATA_DIR, save_dir)
-        os.makedirs(save_dir, exist_ok=True)
-        save_file = os.path.join(save_dir, save_path)
-        plt.savefig(save_file)
+        plt.savefig(save_path)
     else:
         plt.show()
 
