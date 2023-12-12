@@ -153,7 +153,7 @@ class AlignAndTranslate(nn.Module):
     def display(self,output:torch.tensor, allignments:torch.tensor, x:torch.tensor, y:torch.tensor, val : bool = True):
             prediction = output[:4]
             prediction[:,:,-2] = torch.min(prediction) # set the <unk> token to the minimum value so that it is not selected
-            prediction_idx = self.beam_search(prediction, 30) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
+            prediction_idx = self.beam_search(prediction, 5) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
 
             sample = self.sample_translation(x[:4], prediction_idx, y[:4])
             name = "Validation" if val else "Training"
@@ -236,12 +236,20 @@ class AlignAndTranslate(nn.Module):
                     # Find the top-k candidates based on the cumulative scores
                     top_k_indices = torch.topk(cumulative_scores, beam_size).indices
                     for i in top_k_indices:
-                        # Check if the new index is the same as the last index in the sequence
-                        if len(seq) > 0 and i in seq: 
-                            # decrease the distance proportionally to the index distance
-                            inverse_distance = 1 - (len(seq) - torch.where(seq == i)[-1] - 1 ) / len(seq)
-                            
-                            new_score = cumulative_scores[i] - 10 * inverse_distance * (cumulative_scores[i] - torch.min(cumulative_scores))                    
+                        #avoid repitition
+                        repition = False
+                        #check repitions
+                        for length in range(len(seq)):
+                            concatenated = torch.cat([seq[len(seq) -length:],torch.tensor([i], dtype=torch.int64, device=device)])
+                            previous = seq[len(seq) - 2*length -1:len(seq) - length]
+                            if len(previous) == len(concatenated):
+                                repition = (concatenated == previous).all()
+                            if repition:
+                                break
+
+                        if repition:
+                            continue
+
                         new_seq = torch.cat([seq, torch.tensor([i], dtype=torch.long, device=device)])
                         new_score = cumulative_scores[i]
                         new_candidates.append((new_seq, new_score))
