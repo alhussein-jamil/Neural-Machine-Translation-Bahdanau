@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk,  concatenate_datasets
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch.utils.data import Dataset
 from global_variables import DATA_DIR, EXT_DATA_DIR
@@ -282,7 +282,9 @@ def load_data(
 
     if not os.path.exists(DATA_DIR / "processed_data/word_count_{}".format(train_len)):
         print("Counting word frequency...")
-        word_count = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
+        word_count_train = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
+        word_count_val = tokenized_val_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
+        word_count = concatenate_datasets([word_count_train, word_count_val])
         word_count.save_to_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
     word_count = load_from_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
 
@@ -309,8 +311,8 @@ def load_data(
     most_frequent_french_words = bow_french["word"].apply(lambda x: str(x)).tolist()
     tokenized_most_frequent_english_words = mt_en.tokenize(" ".join(most_frequent_english_words))[: kx - 1]
     tokenized_most_frequent_french_words = mt_fr.tokenize(" ".join(most_frequent_french_words))[: ky - 1]
-    tokenized_most_frequent_english_words.append("<unk>")
-    tokenized_most_frequent_french_words.append("<unk>")
+    tokenized_most_frequent_english_words.append("")
+    tokenized_most_frequent_french_words.append("")
     
     to_id_transform = toIdTransform(
         tokenized_most_frequent_english_words,

@@ -46,17 +46,17 @@ class AlignAndTranslate(nn.Module):
             os.makedirs(DATA_DIR / f"outputs/")
 
 
-    def forward(self, x: torch.Tensor, validation: bool = False) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Forward pass through encoder and decoder
         encoder_output, _ = self.encoder(x)
         decoder_output, allignments= self.decoder(encoder_output)
-        return (decoder_output, allignments) if validation else decoder_output
+        return (decoder_output, allignments)
 
     def train_step(self, x: torch.Tensor, y: torch.Tensor) -> float:
         # Training step
         self.optimizer.zero_grad()
 
-        output = self.forward(x.to(self.device))
+        output, allignments= self.forward(x.to(self.device))
 
         loss = self.criterion(output, y)
         # normalize L2 loss so that it stays under 1
@@ -64,7 +64,7 @@ class AlignAndTranslate(nn.Module):
         #     loss = loss / torch.norm(loss)
         loss.backward()
         self.optimizer.step()
-        return loss.item()
+        return loss.item(), output, allignments
 
     def save_model(self, directory: str = "checkpoints/") -> None:
         
@@ -117,7 +117,7 @@ class AlignAndTranslate(nn.Module):
                 )
                 x = x.to(self.device)
                 y = y.to(self.device)
-                loss = self.train_step(x, y)
+                loss, output, allignments= self.train_step(x, y)
                 self.losses.append(loss)
                 if i % self.print_every == 0:
                     print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}")
@@ -126,35 +126,47 @@ class AlignAndTranslate(nn.Module):
                     self.save_model( "checkpoints/")
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
+                self.display(output, allignments, x, y, val=False)
+
 
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
                 self.save_model("best_models/")
+
+
+
+    def display(self,output:torch.tensor, allignments:torch.tensor, x:torch.tensor, y:torch.tensor, val : bool = True):
+            prediction = output[:4]
+            prediction[:,:,-2] = torch.min(prediction) # set the <unk> token to the minimum value so that it is not selected
+            prediction_idx = self.beam_search(prediction, 10) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
+
+            sample = self.sample_translation(x[:4], prediction_idx, y[:4])
+            name = "Validation" if val else "Training"
+            translations = f"{name} samples:\n"
+            for s in range(4):
+                translations += f"\tSource: {sample[0][s]}\n"
+                translations += f"\tPrediction: {sample[1][s]}\n"
+                translations += f"\tTranslation: {sample[2][s]}\n"
+                translations += "\n"   
+            with open(DATA_DIR / f"outputs/outputs_{self.timestamp}_{name}.txt", "w") as myfile:
+                myfile.write(translations, encoding="utf-8")
+            print(translations)
+            if val:
+                self.plot_attention(sample[0], sample[1], allignments[:4])
+
+
 
     def evaluate(self, val_loader) -> float:
         # Evaluation function
         total_loss = 0
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
-            output, allignments= self.forward(x.to(self.device), validation=True)
+            output, allignments= self.forward(x.to(self.device))
             loss = self.criterion(output, y.to(self.device)) 
             total_loss += loss.item()
             if i == 0:
-                prediction = output[:4]
-                prediction[:,:,-2] = torch.min(prediction) # set the <unk> token to the minimum value so that it is not selected
-                prediction_idx = self.beam_search(prediction, 50) if self.beam_search_flag else torch.argmax(prediction, dim=-1)
+                self.display(output, allignments, x, y, val=True)
 
-                sample = self.sample_translation(x[:4], prediction_idx, y[:4])
-                translations = ""
-                for s in range(4):
-                    translations += f"\tSource: {sample[0][s]}\n"
-                    translations += f"\tPrediction: {sample[1][s]}\n"
-                    translations += f"\tTranslation: {sample[2][s]}\n"
-                    translations += "\n"   
-                with open(DATA_DIR / f"outputs/outputs_{self.timestamp}.txt", "w") as myfile:
-                    myfile.write(translations)
-                print(translations)
-                self.plot_attention(sample[0], sample[1], allignments[:4])
         return total_loss / len(val_loader)
 
     @property
