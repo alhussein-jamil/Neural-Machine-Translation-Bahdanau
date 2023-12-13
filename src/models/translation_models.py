@@ -152,7 +152,7 @@ class AlignAndTranslate(nn.Module):
                 encoding="utf-8",
             ) as myfile:
                 myfile.write(
-                    "{} {} {}\n".format(self.train_losses[-1], self.val_losses[-1], torch.mean(self.bleu_scores[-1]))
+                    "{} {} {}\n".format(self.train_losses[-1], self.val_losses[-1], torch.mean(self.bleu_scores[-1]).float())   
                 )
 
             if val_loss < self.best_val_loss:
