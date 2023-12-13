@@ -13,8 +13,12 @@ class Alignment(nn.Module):
         super().__init__()
         self.hidden_size = input_size // 3
 
-        self.nn_h = FCNN(input_size=self.hidden_size * 2, output_size=output_size, device=device)
-        self.nn_s = FCNN(input_size=self.hidden_size, output_size=output_size, device=device)
+        self.nn_h = FCNN(
+            input_size=self.hidden_size * 2, output_size=output_size, device=device
+        )
+        self.nn_s = FCNN(
+            input_size=self.hidden_size, output_size=output_size, device=device
+        )
 
     def forward(self, s_emb: torch.Tensor, h_emb: torch.Tensor) -> torch.Tensor:
         """
@@ -34,6 +38,7 @@ class Alignment(nn.Module):
 
     def forward_unoptimized(self, s, h):
         return self.forward(self, self.nn_s(s), self.nn_h(h))
+
 
 class OutputNetwork(nn.Module):
     def __init__(
@@ -64,11 +69,12 @@ class OutputNetwork(nn.Module):
             input_size=max_out_units,
             output_size=vocab_size,
             device=device,
-    
         )
         self.output_size = vocab_size
 
-    def forward(self, s_i: torch.Tensor, y_i: torch.Tensor, c_i: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, s_i: torch.Tensor, y_i: torch.Tensor, c_i: torch.Tensor
+    ) -> torch.Tensor:
         """
         Performs a forward pass through the OutputNetwork module.
 
@@ -81,15 +87,22 @@ class OutputNetwork(nn.Module):
             torch.Tensor: The output tensor.
         """
         # based on the article Maxout Networks
-        t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1)) 
+        t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1))
         t_even = t_tilde[:, : t_tilde.size(1) // 2]
         t_odd = t_tilde[:, t_tilde.size(1) // 2 :]
-        t = torch.max(t_even, t_odd) 
+        t = torch.max(t_even, t_odd)
         return self.output_nn(t)
 
 
 class Decoder(nn.Module):
-    def __init__(self, alignment: Dict[str, Any], rnn: Dict[str, Any], embedding: Dict[str, Any], output_nn: Dict[str, Any], traditional: bool = False) -> None:
+    def __init__(
+        self,
+        alignment: Dict[str, Any],
+        rnn: Dict[str, Any],
+        embedding: Dict[str, Any],
+        output_nn: Dict[str, Any],
+        traditional: bool = False,
+    ) -> None:
         super().__init__()
 
         self.alignment = Alignment(**alignment)
@@ -98,7 +111,7 @@ class Decoder(nn.Module):
             input_size=rnn["hidden_size"],
             output_size=embedding["embedding_size"],
             device=embedding["device"],
-            bias=False,
+            # bias=False,
         )
         self.hidden_size = rnn["hidden_size"]
         self.output_nn = OutputNetwork(**output_nn)
@@ -106,7 +119,7 @@ class Decoder(nn.Module):
         self.relaxation_nn = FCNN(
             input_size=rnn["hidden_size"],
             output_size=output_nn["vocab_size"],
-            bias = False
+            # bias=False,
         )
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
@@ -119,12 +132,13 @@ class Decoder(nn.Module):
         Returns:
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
-    
+
         # Initialize output tensor
-        output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size).to(h.device)
+        output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size).to(
+            h.device
+        )
 
         if not self.traditional:
-
             # Initialize context vector
             s_i = torch.zeros(
                 self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
@@ -151,19 +165,25 @@ class Decoder(nn.Module):
                 c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
 
                 # Compute output and update context vector
-                raw_y_i, s_i = self.rnn(torch.cat((embed_y_i.unsqueeze(1), c.unsqueeze(1)), dim=2), s_i)
+                raw_y_i, s_i = self.rnn(
+                    torch.cat((embed_y_i.unsqueeze(1), c.unsqueeze(1)), dim=2), s_i
+                )
 
                 # Embed the output token
                 embed_y_i = self.embedding(raw_y_i.squeeze(1))
 
                 # Compute the output of the output network
-                output_network_out = self.output_nn(s_i.view(h.size(0), -1), embed_y_i.squeeze(1), c)
+                output_network_out = self.output_nn(
+                    s_i.view(h.size(0), -1), embed_y_i.squeeze(1), c
+                )
 
                 # Store the output in the output tensor
                 output[:, i, :] = output_network_out
-        else: 
+        else:
             output_rnn, _ = self.rnn(h)
             relaxed = self.relaxation_nn(output_rnn)
-            output[:,:,:] = relaxed  
+            output[:, :, :] = relaxed
 
-        return output, torch.stack(allignments, dim=1) if not self.traditional else torch.zeros(h.shape[0], h.shape[1], h.shape[1])
+        return output, torch.stack(
+            allignments, dim=1
+        ) if not self.traditional else torch.zeros(h.shape[0], h.shape[1], h.shape[1])

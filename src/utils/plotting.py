@@ -41,7 +41,7 @@ def plot_alignment(
         ax = axes[i // 2, i % 2]
         
         #make allignment values between 0 and 1 with 1 being the max value
-        alignment = (alignment - np.min(alignment))/(np.max(alignment) - np.min(alignment))
+        alignment = (alignment - np.min(alignment))/(np.max(alignment) - np.min(alignment)) if np.max(alignment) != 0 else alignment
 
         # Plot the alignment matrix
         ax.imshow(alignment, cmap="gray", aspect="auto")  # Set aspect to "auto" to fill the entire width
