@@ -85,8 +85,6 @@ class RNN(nn.Module):
                 x.size(0),
                 self.hidden_size,
             ).to(self.device)
-            #initialize with xavier
-            torch.nn.init.xavier_uniform_(h0)
 
         # Forward propagate RNN
         out, hidden = self.rnn(x, h0)

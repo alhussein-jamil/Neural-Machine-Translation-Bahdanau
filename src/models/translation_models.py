@@ -32,7 +32,7 @@ class AlignAndTranslate(nn.Module):
             "criterion", Loss(nn.NLLLoss(reduction="mean"))
         )
         self.optimizer = training_config.get(
-            "optimizer", torch.optim.Adadelta(self.parameters())
+            "optimizer", torch.optim.Adadelta(self.parameters(),eps = 1e-6, rho=0.95)
         )
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)

@@ -121,6 +121,9 @@ class Decoder(nn.Module):
             output_size=output_nn["vocab_size"],
             # bias=False,
         )
+        self.Ws = nn.Linear(2 * rnn["hidden_size"], rnn["hidden_size"]).to(
+            embedding["device"]
+        )
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         """
@@ -140,13 +143,21 @@ class Decoder(nn.Module):
 
         if not self.traditional:
             # Initialize context vector
-            s_i = torch.zeros(
+            # s_i = torch.zeros(
+            #     self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
+            #     h.size(0),
+            #     self.rnn.hidden_size,
+            # ).to(h.device)
+            # breakpoint()
+            # print(self.Ws(h[:, 1, :]).shape)
+            #
+            
+            s_i = F.tanh( self.Ws(h[:, 1, :])).view(
                 self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
                 h.size(0),
                 self.rnn.hidden_size,
-            ).to(h.device)
-            torch.nn.init.xavier_uniform_(s_i)
-
+            )
+            
             embed_y_i = torch.zeros(h.size(0), self.embedding.output_size).to(h.device)
 
             h_emb = self.alignment.nn_h(h)
