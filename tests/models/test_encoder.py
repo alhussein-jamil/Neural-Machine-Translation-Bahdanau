@@ -19,7 +19,7 @@ class TestEncoder(unittest.TestCase):
             vocab_size=20,
             rnn_type="GRU",
             embedding_size=10,
-        )
+        ).to("cpu")
 
         # Generate dummy data for the test
         input_data = torch.randint(0, 20, (batch_size, sequence_length))

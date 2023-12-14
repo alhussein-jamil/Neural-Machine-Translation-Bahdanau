@@ -6,9 +6,13 @@ import numpy as np
 import pandas as pd
 import torch
 from datasets import load_dataset, load_from_disk,  concatenate_datasets
-from sacremoses import MosesDetokenizer, MosesTokenizer
+from sacremoses import  MosesTokenizer
 from torch.utils.data import Dataset
 from global_variables import DATA_DIR, EXT_DATA_DIR
+
+from transformers import AutoTokenizer
+from multiprocessing import Process, Manager
+
 
 n_processors = cpu_count()
 
@@ -179,11 +183,6 @@ def extract_word_frequency(data):
     df_fr.sort_values(by=["freq"], ascending=False, inplace=True)
 
     return df_en, df_fr
-
-
-from transformers import AutoTokenizer
-
-from multiprocessing import Process, Manager
 
 # Helper function to pad sequences to a specified length
 def pad_to_length(x, length, pad_value):

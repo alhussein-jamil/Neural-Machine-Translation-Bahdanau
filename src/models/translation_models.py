@@ -32,7 +32,7 @@ class AlignAndTranslate(nn.Module):
             "criterion", Loss(nn.NLLLoss())
         )
         self.optimizer = training_config.get(
-            "optimizer", torch.optim.Adam(self.parameters())
+            "optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
         )
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
@@ -76,13 +76,18 @@ class AlignAndTranslate(nn.Module):
 
         output, allignments = self.forward(x.to(self.device))
 
-        loss = self.criterion(output, y) / output.shape[-1]
-        loss *= (1e4)/4.0
+        loss = self.criterion(output, y)
+        L2_reg = torch.tensor(0.0).to(self.device)
+        for param in self.parameters():
+            L2_reg += torch.norm(param)
+        #/ output.shape[-1]
+        # loss *= (1e8)/4.0
+        loss += 1e-3 * L2_reg
 
         truncated_loss = loss.clone()
         # normalize L2 loss so that it stays under 1
-        if torch.norm(loss) > 1:
-            truncated_loss = loss / torch.norm(loss)
+        # if torch.norm(loss) > 1:
+        #     truncated_loss = loss / torch.norm(loss)
         truncated_loss.backward()
         self.optimizer.step()
         return loss.item(), output, allignments

@@ -121,7 +121,7 @@ class Decoder(nn.Module):
             output_size=output_nn["vocab_size"],
             # bias=False,
         )
-        self.Ws = nn.Linear(2 * rnn["hidden_size"], rnn["hidden_size"]).to(
+        self.Ws = nn.Linear(rnn["hidden_size"], rnn["hidden_size"]).to(
             embedding["device"]
         )
 
@@ -152,12 +152,11 @@ class Decoder(nn.Module):
             # print(self.Ws(h[:, 0, :]).shape)
             #
             
-            s_i = F.tanh( self.Ws(h[:, 0, :])).view(
+            s_i = F.tanh( self.Ws(h[:, 0, self.rnn.hidden_size:])).view(
                 self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
                 h.size(0),
                 self.rnn.hidden_size,
             )
-            
             embed_y_i = torch.zeros(h.size(0), self.embedding.output_size).to(h.device)
 
             h_emb = self.alignment.nn_h(h)
@@ -171,7 +170,6 @@ class Decoder(nn.Module):
                 allignments.append(a)
                 # Apply softmax to obtain attention weights
                 e = F.softmax(a, dim=1)
-
                 # Compute context vector
                 c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
 

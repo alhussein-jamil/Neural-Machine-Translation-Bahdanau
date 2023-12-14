@@ -34,5 +34,4 @@ class Encoder(nn.Module):
         embedded = self.embedding(x.int())
         # Appeler la classe RNN pour obtenir output et hidden
         rnn_output, rnn_hidden = self.rnn(embedded)
-
         return rnn_output, rnn_hidden

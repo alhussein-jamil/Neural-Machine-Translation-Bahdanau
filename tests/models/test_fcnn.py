@@ -26,7 +26,7 @@ class TestFCNN(unittest.TestCase):
             self.activation,
             self.last_layer_activation,
             self.dropout,
-        )
+        ).to(self.device)
 
     def test_model_initialization(self):
         # Check if the model is an instance of nn.Module

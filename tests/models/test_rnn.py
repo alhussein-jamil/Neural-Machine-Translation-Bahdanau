@@ -25,8 +25,7 @@ class TestRNN(unittest.TestCase):
             self.activation,
             self.dropout,
             type=self.type,
-        )
-
+        ).to(self.device)
     def test_model_initialization(self):
         # Check if the model is an instance of nn.Module
         self.assertIsInstance(self.model, nn.Module)
