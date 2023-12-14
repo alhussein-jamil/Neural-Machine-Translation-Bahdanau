@@ -82,7 +82,7 @@ class AlignAndTranslate(nn.Module):
             L2_reg += torch.norm(param)
         #/ output.shape[-1]
         # loss *= (1e8)/4.0
-        loss += 1e-3 * L2_reg
+        loss += 1e-4 * L2_reg
 
         truncated_loss = loss.clone()
         # normalize L2 loss so that it stays under 1
@@ -175,7 +175,8 @@ class AlignAndTranslate(nn.Module):
         y: torch.tensor,
         val: bool = True,
     ):
-        prediction = output[:4]
+        random_idx = torch.randint(0, len(x), (4,)) 
+        prediction = output[random_idx]
         prediction[:, :, -2] = torch.min(
             prediction
         )  # set the <unk> token to the minimum value so that it is not selected
@@ -192,7 +193,7 @@ class AlignAndTranslate(nn.Module):
             )
         )
 
-        sample = self.sample_translation(x[:4], prediction_idx, y[:4])
+        sample = self.sample_translation(x[random_idx], prediction_idx, y[random_idx])
         name = "Validation" if val else "Training"
         translations = f"{name} samples:\n"
         for s in range(4):
@@ -206,7 +207,7 @@ class AlignAndTranslate(nn.Module):
             myfile.write(translations)
         print(translations)
         if val:
-            bleu_scores = self.bleu_scores[-1][:4]
+            bleu_scores = self.bleu_scores[-1][random_idx]
             self.plot_attention(sample[0], sample[1], allignments[:4], bleu_scores)
 
     def evaluate(self, val_loader) -> float:
@@ -329,7 +330,7 @@ class AlignAndTranslate(nn.Module):
 
         return output
 
-    def plot_attention(self, source, prediction, allignments, titles):
+    def plot_attention(self, source, prediction, allignments, titles, val=True):
         source_list = [s.split(" ") for s in source]
         prediction_list = [p.split(" ") for p in prediction]
         alls = []
@@ -341,4 +342,4 @@ class AlignAndTranslate(nn.Module):
             f"phrase {i}: bleu-score of {titles[i]*100.0}": (source_list[i], prediction_list[i], alls[i])
             for i in range(len(source_list))
         }
-        plot_alignment(data, save_path=self.plot_dir / (self.timestamp + ".png"))
+        plot_alignment(data, save_path=self.plot_dir / (self.timestamp+"_{}".format("val" if val else "train")+ ".png"))
