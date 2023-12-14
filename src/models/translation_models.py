@@ -76,11 +76,14 @@ class AlignAndTranslate(nn.Module):
 
         output, allignments = self.forward(x.to(self.device))
 
-        loss = self.criterion(output, y)
+        loss = self.criterion(output, y) / output.shape[-1]
+        loss *= (1e4)/4.0
+
+        truncated_loss = loss.clone()
         # normalize L2 loss so that it stays under 1
         if torch.norm(loss) > 1:
-            loss = loss / torch.norm(loss)
-        loss.backward()
+            truncated_loss = loss / torch.norm(loss)
+        truncated_loss.backward()
         self.optimizer.step()
         return loss.item(), output, allignments
 

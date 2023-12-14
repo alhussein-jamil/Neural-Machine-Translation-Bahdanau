@@ -43,7 +43,7 @@ class FCNN(nn.Module):
             # Add the final fully-connected layer
             self.fc.append(nn.Linear(self.hidden_sizes[-1], self.output_size))
 
-        self.fc = self.fc.to(self.device)
+        self.fc = self.fc
 
         # Add the activation function
         self.activation = activation

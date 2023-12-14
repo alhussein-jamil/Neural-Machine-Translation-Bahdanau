@@ -63,7 +63,7 @@ class RNN(nn.Module):
             batch_first=True,
             dropout=dropout,
             bidirectional=bidirectional,
-        ).to(self.device)
+        )
 
         # Initialize weights
         self.init_weights()

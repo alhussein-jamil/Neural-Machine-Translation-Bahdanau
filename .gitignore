@@ -4,3 +4,4 @@
 *cache*
 *data/local_data
 *.ipynb
+.history/

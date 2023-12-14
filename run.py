@@ -119,7 +119,7 @@ if __name__ == "__main__":
     translator_cfg = dict(encoder=config_encoder, decoder=config_decoder, training=training_cfg)
 
     # Create the model
-    model = AlignAndTranslate(**translator_cfg)
+    model = AlignAndTranslate(**translator_cfg).to(device)
 
     # Train the model
     model.train(train_loader=train_dataloader, val_loader=val_dataloader)
