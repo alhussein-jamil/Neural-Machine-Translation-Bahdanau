@@ -149,10 +149,10 @@ class Decoder(nn.Module):
             #     self.rnn.hidden_size,
             # ).to(h.device)
             # breakpoint()
-            # print(self.Ws(h[:, 1, :]).shape)
+            # print(self.Ws(h[:, 0, :]).shape)
             #
             
-            s_i = F.tanh( self.Ws(h[:, 1, :])).view(
+            s_i = F.tanh( self.Ws(h[:, 0, :])).view(
                 self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
                 h.size(0),
                 self.rnn.hidden_size,
@@ -194,7 +194,7 @@ class Decoder(nn.Module):
             output_rnn, _ = self.rnn(h)
             relaxed = self.relaxation_nn(output_rnn)
             output[:, :, :] = relaxed
-
+    
         return output, torch.stack(
             allignments, dim=1
         ) if not self.traditional else torch.zeros(h.shape[0], h.shape[1], h.shape[1])

@@ -62,7 +62,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         num_layers=1,
         device=device,
-        dropout=0,
+        dropout=0.0,
         type="GRU",
         bidirectional=False,
     )
