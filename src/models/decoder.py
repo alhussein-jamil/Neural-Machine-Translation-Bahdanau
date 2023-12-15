@@ -48,6 +48,7 @@ class OutputNetwork(nn.Module):
         hidden_size: int,
         vocab_size: int,
         device: torch.device,
+        **kwargs,
     ) -> None:
         """
         Initializes the OutputNetwork module.
@@ -64,11 +65,13 @@ class OutputNetwork(nn.Module):
             input_size=embedding_size + 3 * hidden_size,
             output_size=2 * max_out_units,
             device=device,
+            **kwargs,
         )
         self.output_nn = FCNN(
             input_size=max_out_units,
             output_size=vocab_size,
             device=device,
+            **kwargs,
         )
         self.output_size = vocab_size
 
@@ -113,6 +116,8 @@ class Decoder(nn.Module):
             device=embedding["device"],
             # bias=False,
         )
+        self.batch_norm_enc = nn.BatchNorm1d(2*rnn["hidden_size"])
+   
         self.hidden_size = rnn["hidden_size"]
         self.output_nn = OutputNetwork(**output_nn)
         self.traditional = traditional
@@ -135,6 +140,7 @@ class Decoder(nn.Module):
         Returns:
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
+        h = self.batch_norm_enc(h.reshape(-1, 2*self.hidden_size)).reshape(h.shape[0], -1, 2*self.hidden_size)
 
         # Initialize output tensor
         output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size).to(
@@ -157,6 +163,7 @@ class Decoder(nn.Module):
                 h.size(0),
                 self.rnn.hidden_size,
             )
+
             embed_y_i = torch.zeros(h.size(0), self.embedding.output_size).to(h.device)
 
             h_emb = self.alignment.nn_h(h)

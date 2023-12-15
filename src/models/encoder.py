@@ -13,7 +13,7 @@ class Encoder(nn.Module):
         vocab_size = kwargs.get("vocab_size", 5)
         rnn_type = kwargs.get("rnn_type", "GRU")
         embedding_size = kwargs.get("embedding_size", 5)
-
+        dropout = kwargs.get("dropout", 0.0)
         super().__init__()
         self.vocab_size = vocab_size
         # Utiliser la classe RNN dans Encoder
@@ -23,7 +23,7 @@ class Encoder(nn.Module):
             num_layers=rnn_num_layers,
             device=rnn_device,
             activation=nn.Tanh(),
-            # dropout=0,
+            dropout=dropout,
             bidirectional=True,
             type=rnn_type,
         )
