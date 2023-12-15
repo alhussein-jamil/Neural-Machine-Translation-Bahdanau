@@ -84,6 +84,6 @@ class FCNN(nn.Module):
     def init_weights(self):
         for name, param in self.named_parameters():
             if 'weight' in name:
-                init.kaiming_normal_(param.data, mode='fan_out', nonlinearity='relu')
+                init.normal_(param.data, mean=0, std=0.01)
             elif 'bias' in name:
                 init.constant_(param.data, 0)

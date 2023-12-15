@@ -97,3 +97,5 @@ class RNN(nn.Module):
            if "weight" in name:
                 if "rnn" in name:
                     init.orthogonal_(param.data)
+                else:
+                    init.normal_(param.data, mean=0, std=0.01)

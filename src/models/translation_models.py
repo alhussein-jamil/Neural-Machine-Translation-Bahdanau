@@ -82,7 +82,7 @@ class AlignAndTranslate(nn.Module):
             L2_reg += torch.norm(param)
         #/ output.shape[-1]
         # loss *= (1e8)/4.0
-        loss += 1e-4 * L2_reg
+        # loss += 1e-4 * L2_reg
 
         truncated_loss = loss.clone()
         # normalize L2 loss so that it stays under 1
@@ -125,6 +125,8 @@ class AlignAndTranslate(nn.Module):
             print(f"No model found in {self.best_models_dir}")
 
     def train(self, train_loader, val_loader) -> None:
+        train_file_exists = os.path.exists(self.output_dir / "train_losses.txt")
+        val_file_exists = os.path.exists(self.output_dir / "val_losses.txt")
         # Training loop
         for epoch in range(self.epochs):
             losses = []
@@ -144,27 +146,38 @@ class AlignAndTranslate(nn.Module):
                 if i % self.save_every == 0:
                     self.save_model()
 
+                with open(
+                    self.output_dir / "train_losses.txt",
+                    "a" if not train_file_exists else "w",
+                ) as myfile:
+                    myfile.write(f"{loss}\n")
+            val_losses = []
             with torch.no_grad():
                 val_loss = self.evaluate(val_loader)
+                val_losses.append(val_loss)
                 self.val_losses.append(val_loss)
                 self.display(output, allignments, x, y, val=False)
                 print(f"Epoch: {epoch}, Validation Loss: {val_loss}")
+                with open(
+                    self.output_dir / "val_losses.txt",
+                    "a" if not val_file_exists else "w",
+                ) as myfile:
+                    myfile.write(f"{val_loss}\n")
             self.train_losses.append(sum(losses) / len(losses))
-            new = True
-            if os.path.exists(self.output_dir / "losses.txt"):
-                new = False
 
+            losses_exist = os.path.exists(self.output_dir / "losses.txt")
+                
             with open(
                 self.output_dir / "losses.txt",
-                "a" if not new else "w",
+                "a" if not losses_exist else "w",
                 encoding="utf-8",
             ) as myfile:
                 myfile.write(
                     "{} {} {}\n".format(self.train_losses[-1], self.val_losses[-1], torch.mean(self.bleu_scores[-1]).float())   
                 )
 
-            if val_loss < self.best_val_loss:
-                self.best_val_loss = val_loss
+            if sum(val_losses) / len(val_losses) < self.best_val_loss:
+                self.best_val_loss = sum(val_losses) / len(val_losses)
                 self.save_model(best=True)
 
     def display(

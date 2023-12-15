@@ -14,9 +14,12 @@ class Alignment(nn.Module):
         self.hidden_size = input_size // 3
 
         self.nn_h = FCNN(
-            input_size=self.hidden_size * 2, output_size=output_size, device=device
+            input_size=self.hidden_size * 2, output_size=self.hidden_size, device=device
         )
         self.nn_s = FCNN(
+            input_size=self.hidden_size, output_size=self.hidden_size, device=device
+        )
+        self.nn_v = FCNN(
             input_size=self.hidden_size, output_size=output_size, device=device
         )
 
@@ -32,7 +35,7 @@ class Alignment(nn.Module):
             torch.Tensor: Alignment vector.
         """
         # Find the alignment network response
-        a = F.tanh(s_emb + h_emb)
+        a = self.nn_v(F.tanh(s_emb + h_emb))
 
         return a
 
@@ -91,8 +94,8 @@ class OutputNetwork(nn.Module):
         """
         # based on the article Maxout Networks
         t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1))
-        t_even = t_tilde[:, : t_tilde.size(1) // 2]
-        t_odd = t_tilde[:, t_tilde.size(1) // 2 :]
+        t_even = t_tilde[:,0 : : 2]
+        t_odd = t_tilde[:, 1 : : 2]
         t = torch.max(t_even, t_odd)
         return self.output_nn(t)
 
@@ -140,7 +143,7 @@ class Decoder(nn.Module):
         Returns:
             torch.Tensor: Tensor containing the predicted indices of the output tokens.
         """
-        h = self.batch_norm_enc(h.reshape(-1, 2*self.hidden_size)).reshape(h.shape[0], -1, 2*self.hidden_size)
+        # h = self.batch_norm_enc(h.reshape(-1, 2*self.hidden_size)).reshape(h.shape[0], -1, 2*self.hidden_size)
 
         # Initialize output tensor
         output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size).to(
@@ -148,16 +151,7 @@ class Decoder(nn.Module):
         )
 
         if not self.traditional:
-            # Initialize context vector
-            # s_i = torch.zeros(
-            #     self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
-            #     h.size(0),
-            #     self.rnn.hidden_size,
-            # ).to(h.device)
-            # breakpoint()
-            # print(self.Ws(h[:, 0, :]).shape)
-            #
-            
+            # Initialize context vector as a learnable parameter
             s_i = F.tanh( self.Ws(h[:, 0, self.rnn.hidden_size:])).view(
                 self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
                 h.size(0),
