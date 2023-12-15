@@ -94,8 +94,9 @@ class OutputNetwork(nn.Module):
         """
         # based on the article Maxout Networks
         t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1))
-        t_even = t_tilde[:,0 : : 2]
-        t_odd = t_tilde[:, 1 : : 2]
+        #sep odd and even
+        t_even = t_tilde[:, 0 : : 2]
+        t_odd  = t_tilde[:, 1 : : 2]
         t = torch.max(t_even, t_odd)
         return self.output_nn(t)
 

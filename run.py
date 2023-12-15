@@ -62,7 +62,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         num_layers=1,
         device=device,
-        dropout=0.0,
+        dropout=0.25,
         type="GRU",
         bidirectional=False,
     )
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         vocab_size=len(french_vocab) + 1,
         device=device,
-        dropout=0.0,
+        dropout=0.25,
     )
 
     decoder_embedding_cfg = dict(

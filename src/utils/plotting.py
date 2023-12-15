@@ -39,9 +39,9 @@ def plot_alignment(
 
         # Get the current subplot
         ax = axes[i // 2, i % 2]
-        
+        alignment_max, alignment_min = np.max(alignment, axis=1), np.min(alignment, axis=1)
         #make allignment values between 0 and 1 with 1 being the max value
-        alignment = alignment if np.max(alignment)==np.min(alignment) else (alignment - np.min(alignment))/(np.max(alignment) - np.min(alignment))
+        alignment = (alignment - alignment_min[:, None]) / (alignment_max[:, None] - alignment_min[:, None])
 
         # Plot the alignment matrix
         ax.imshow(alignment, cmap="gray", aspect="auto")  # Set aspect to "auto" to fill the entire width
