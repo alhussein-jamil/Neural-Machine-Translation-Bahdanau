@@ -79,6 +79,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         vocab_size=len(french_vocab) + 1,
         device=device,
+        dropout=0.0,
     )
 
     decoder_embedding_cfg = dict(
@@ -92,6 +93,7 @@ if __name__ == "__main__":
         output_nn=output_nn_cfg,
         embedding=decoder_embedding_cfg,
         traditional = config["encoder_decoder"],
+
     )
 
     # Define configuration for the encoder
@@ -102,6 +104,7 @@ if __name__ == "__main__":
         vocab_size=len(english_vocab) + 1,
         rnn_type="GRU",
         embedding_size=config["embedding_size"],
+        dropout=0.0,
     )
 
     # Define training configuration
