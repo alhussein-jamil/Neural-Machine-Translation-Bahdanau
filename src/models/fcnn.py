@@ -15,7 +15,9 @@ class FCNN(nn.Module):
         activation: nn.Module = nn.Tanh(),
         last_layer_activation: nn.Module = nn.Identity(),
         dropout: float = 0,
-        bias: bool = True
+        bias: bool = True,
+        mean: float = 0,
+        std: float = 0.01,
     ):
         super(FCNN, self).__init__()
 
@@ -32,7 +34,7 @@ class FCNN(nn.Module):
         self.fc.append(
             nn.Linear(
                 self.input_size,
-                self.hidden_sizes[0] if len(self.hidden_sizes) > 0 else self.output_size,            )
+                self.hidden_sizes[0] if len(self.hidden_sizes) > 0 else self.output_size)
         )
 
         # Add the remaining fully-connected layers
@@ -52,7 +54,7 @@ class FCNN(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         # Initialize the weights
-        self.init_weights()
+        self.init_weights(mean, std)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -81,9 +83,9 @@ class FCNN(nn.Module):
 
         return x
     
-    def init_weights(self):
+    def init_weights(self, mean: float = 0, std: float = 0.01):
         for name, param in self.named_parameters():
             if 'weight' in name:
-                init.normal_(param.data, mean=0, std=0.01)
+                init.normal_(param.data, mean=mean, std=std)
             elif 'bias' in name:
                 init.constant_(param.data, 0)

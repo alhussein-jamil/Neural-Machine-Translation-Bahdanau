@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from metrics.losses import Loss
-from metrics import bleu
+from metrics import bleu_seq
 from models.decoder import Decoder
 from models.encoder import Encoder
 
@@ -32,7 +32,8 @@ class AlignAndTranslate(nn.Module):
             "criterion", Loss(nn.NLLLoss())
         )
         self.optimizer = training_config.get(
-            "optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
+            # "optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
+            "optimizer", torch.optim.Adam(self.parameters())
         )
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
@@ -76,20 +77,26 @@ class AlignAndTranslate(nn.Module):
 
         output, allignments = self.forward(x.to(self.device))
 
-        loss = self.criterion(output, y)
+        loss = self.criterion(output, y)# / output.shape[-2]
         L2_reg = torch.tensor(0.0).to(self.device)
+        
         for param in self.parameters():
             L2_reg += torch.norm(param)
-        #/ output.shape[-1]
-        # loss *= (1e8)/4.0
-        # loss += 1e-4 * L2_reg
+            
+        L2_reg*=1e-4
+        
+        #clamp L2 regularization
+        L2_reg = torch.clamp(L2_reg, 0, 1)
+        
+        loss += L2_reg
 
-        truncated_loss = loss.clone()
-        # normalize L2 loss so that it stays under 1
-        # if torch.norm(loss) > 1:
-        #     truncated_loss = loss / torch.norm(loss)
-        truncated_loss.backward()
+        loss.backward()
+
+        #Gradient Value Clipping
+        nn.utils.clip_grad_norm_(self.parameters(), 1.0)
+
         self.optimizer.step()
+
         return loss.item(), output, allignments
 
     def save_model(self, best: bool = False) -> None:
@@ -191,22 +198,22 @@ class AlignAndTranslate(nn.Module):
         random_idx = torch.randint(0, len(x), (4,)) 
         prediction = output[random_idx]
         prediction[:, :, -2] = torch.min(
-            prediction
+           prediction
         )  # set the <unk> token to the minimum value so that it is not selected
         prediction_idx = (
             self.beam_search(prediction, 5)
             if self.beam_search_flag
             else torch.argmax(prediction, dim=-1)
         )
-        self.bleu_scores.append(
-            bleu(
-                y.cpu().detach().numpy(),
-                prediction_idx.cpu().detach().numpy(),
-                n= 4,
-            )
-        )
+
 
         sample = self.sample_translation(x[random_idx], prediction_idx, y[random_idx])
+
+        self.bleu_scores.append(
+            bleu_seq(sample[1], sample[2], n=4)
+        )
+
+
         name = "Validation" if val else "Training"
         translations = f"{name} samples:\n"
         for s in range(4):
@@ -256,11 +263,11 @@ class AlignAndTranslate(nn.Module):
                 self.idx_to_word(p, self.french_vocab, language="fr")
             )
             # only keep the first len(tranlation_sentences[i]) tokens
-            prediction_sentences[i] = " ".join(
-                prediction_sentences[i].split(" ")[
-                    : len(translation_sentences[i].split(" "))
-                ]
-            )
+            # prediction_sentences[i] = " ".join(
+            #     prediction_sentences[i].split(" ")[
+            #         : len(translation_sentences[i].split(" "))
+            #     ]
+            # )
 
         return [source_sentences, prediction_sentences, translation_sentences]
 
@@ -273,7 +280,7 @@ class AlignAndTranslate(nn.Module):
         phrase = phrase.replace("  ", " ")
         return phrase
 
-    def beam_search(self, tensor, beam_size):
+    def beam_search(self, tensor, beam_size, threshold=-2.8):
         batch_size, len_seq, _ = tensor.size()
         device = tensor.device
 
@@ -289,7 +296,9 @@ class AlignAndTranslate(nn.Module):
             for t in range(len_seq):
                 # Get the scores for the next time step
                 scores = F.log_softmax(tensor[b, t], dim=-1)
-
+                if torch.max(scores) < threshold:
+                    #put padding token
+                    output[b, t] = len(self.french_vocab)
                 # Generate new candidates by expanding the existing ones
                 new_candidates = []
                 for seq, score in candidates:
@@ -351,7 +360,24 @@ class AlignAndTranslate(nn.Module):
             alls.append(alignments[i, : len(prediction_list[i]), : len(source_list[i])])
 
         data = {
-            f"phrase {i}: bleu-score of {titles[i]*100.0}": (source_list[i], prediction_list[i], alls[i])
+            f"phrase {i}: bleu-score of {int(titles[i]*100.0)}%": (source_list[i], prediction_list[i], alls[i])
             for i in range(len(source_list))
         }
         plot_alignment(data, save_path=self.plot_dir / (self.timestamp+"_{}".format("val" if val else "train")+ ".png"))
+
+    def eval(self, dataloader, max_len):
+        #try sentences of length till Tx
+        bleu_scores = torch.zeros(max_len,len(dataloader))
+        original_sentences = []
+        predicted_sentences = []
+        for i, val_sample in enumerate(dataloader):
+            x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
+            output, _ = self.forward(x.to(self.device))
+            prediction_idx = torch.argmax(output, dim=-1)
+            for length in range(1, max_len):
+                translation = self.sample_translation(x[:length], prediction_idx[:length], y[:length])
+                original_sentences += translation[2]
+                predicted_sentences += translation[1]
+
+        bleu_scores = bleu_seq(original_sentences, predicted_sentences, n=4).reshape(max_len,-1)
+        return torch.mean(bleu_scores, dim=1)

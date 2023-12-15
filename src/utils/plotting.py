@@ -62,6 +62,7 @@ def plot_alignment(
     else:
         plt.show()
 
+    plt.close()
 
 def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
     """

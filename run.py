@@ -26,6 +26,8 @@ if __name__ == "__main__":
     parser.add_argument("--encoder_decoder", action="store_true", default=False, help="Use the encoder-decoder model")
     parser.add_argument("--config_file", type=str, default="translation_config.yaml", help="Path to the config file")
     parser.add_argument("--ignore_config", action="store_true", default=False, help="Ignore the config file")
+    parser.add_argument("--test", action="store_true", default=False, help="Run the model in evaluation mode")
+
     args = parser.parse_args()
     device = "cpu" if not torch.cuda.is_available() else "cuda"
     print(f"Using {device} device")
@@ -62,7 +64,6 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         num_layers=1,
         device=device,
-        dropout=0.25,
         type="GRU",
         bidirectional=False,
     )
@@ -71,6 +72,7 @@ if __name__ == "__main__":
         input_size=config["hidden_size"] * 3,
         output_size=config["Tx"],
         device=device,
+        dropout=0.3,
     )
 
     output_nn_cfg = dict(
@@ -79,7 +81,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         vocab_size=len(french_vocab) + 1,
         device=device,
-        dropout=0.25,
+        dropout=0.3,
     )
 
     decoder_embedding_cfg = dict(
@@ -104,7 +106,6 @@ if __name__ == "__main__":
         vocab_size=len(english_vocab) + 1,
         rnn_type="GRU",
         embedding_size=config["embedding_size"],
-        dropout=0.0,
     )
 
     # Define training configuration
@@ -125,4 +126,8 @@ if __name__ == "__main__":
     model = AlignAndTranslate(**translator_cfg).to(device)
 
     # Train the model
-    model.train(train_loader=train_dataloader, val_loader=val_dataloader)
+    if args.test:
+        evaluation = model.eval(val_dataloader,max_len = args.Ty)
+        breakpoint()
+    else:
+        model.train(train_loader=train_dataloader, val_loader=val_dataloader)

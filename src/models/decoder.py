@@ -9,18 +9,18 @@ from models.rnn import RNN
 
 
 class Alignment(nn.Module):
-    def __init__(self, input_size: int, output_size: int, device: torch.device) -> None:
+    def __init__(self, input_size: int, output_size: int, device: torch.device, dropout: float=0.0) -> None:
         super().__init__()
         self.hidden_size = input_size // 3
 
         self.nn_h = FCNN(
-            input_size=self.hidden_size * 2, output_size=self.hidden_size, device=device
+            input_size=self.hidden_size * 2, output_size=self.hidden_size, device=device, dropout=dropout, mean=0, std=0.001
         )
         self.nn_s = FCNN(
-            input_size=self.hidden_size, output_size=self.hidden_size, device=device
+            input_size=self.hidden_size, output_size=self.hidden_size, device=device , dropout=dropout, mean=0, std=0.001
         )
         self.nn_v = FCNN(
-            input_size=self.hidden_size, output_size=output_size, device=device
+            input_size=self.hidden_size, output_size=output_size, device=device , dropout=dropout, mean=0, std=0.0
         )
 
     def forward(self, s_emb: torch.Tensor, h_emb: torch.Tensor) -> torch.Tensor:
@@ -64,12 +64,28 @@ class OutputNetwork(nn.Module):
             device (torch.device): The device to be used for computation.
         """
         super().__init__()
-        self.t_nn = FCNN(
-            input_size=embedding_size + 3 * hidden_size,
-            output_size=2 * max_out_units,
-            device=device,
+
+        #matrix for s_i
+        self.u_o = FCNN(
+            input_size= hidden_size, 
+            output_size= 2 * max_out_units,
             **kwargs,
         )
+
+        #matrix for y_i
+        self.v_o = FCNN(
+            input_size= embedding_size,
+            output_size= 2 * max_out_units,
+            **kwargs,
+        )
+
+        #matrix for c_i
+        self.c_o = FCNN(
+            input_size= 2 * hidden_size,
+            output_size= 2 * max_out_units,
+            **kwargs,
+        )
+
         self.output_nn = FCNN(
             input_size=max_out_units,
             output_size=vocab_size,
@@ -93,11 +109,15 @@ class OutputNetwork(nn.Module):
             torch.Tensor: The output tensor.
         """
         # based on the article Maxout Networks
-        t_tilde = self.t_nn(torch.cat((s_i, y_i, c_i), dim=1))
+        t_tilde = self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i)
+
         #sep odd and even
         t_even = t_tilde[:, 0 : : 2]
         t_odd  = t_tilde[:, 1 : : 2]
+
+        #maxout
         t = torch.max(t_even, t_odd)
+
         return self.output_nn(t)
 
 
@@ -118,9 +138,8 @@ class Decoder(nn.Module):
             input_size=rnn["hidden_size"],
             output_size=embedding["embedding_size"],
             device=embedding["device"],
-            # bias=False,
         )
-        self.batch_norm_enc = nn.BatchNorm1d(2*rnn["hidden_size"])
+        # self.batch_norm_enc = nn.BatchNorm1d(2*rnn["hidden_size"])
    
         self.hidden_size = rnn["hidden_size"]
         self.output_nn = OutputNetwork(**output_nn)
@@ -128,7 +147,6 @@ class Decoder(nn.Module):
         self.relaxation_nn = FCNN(
             input_size=rnn["hidden_size"],
             output_size=output_nn["vocab_size"],
-            # bias=False,
         )
         self.Ws = nn.Linear(rnn["hidden_size"], rnn["hidden_size"]).to(
             embedding["device"]
