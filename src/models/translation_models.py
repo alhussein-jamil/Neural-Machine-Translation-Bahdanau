@@ -206,9 +206,8 @@ class AlignAndTranslate(nn.Module):
         ) as myfile:
             myfile.write(translations)
         print(translations)
-        if val:
-            bleu_scores = self.bleu_scores[-1]
-            self.plot_attention(sample[0], sample[1], allignments[:4], bleu_scores)
+        bleu_scores = self.bleu_scores[-1]
+        self.plot_attention(sample[0], sample[1], allignments[:4], bleu_scores, val=val)
 
     def evaluate(self, val_loader) -> float:
         # Evaluation function
