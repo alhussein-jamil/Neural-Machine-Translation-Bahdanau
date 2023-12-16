@@ -16,7 +16,7 @@ from utils.plotting import *
 from global_variables import DATA_DIR
 
 from sacremoses import MosesDetokenizer
-
+import math
 
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -135,9 +135,12 @@ class AlignAndTranslate(nn.Module):
         train_file_exists = os.path.exists(self.output_dir / "train_losses.txt")
         val_file_exists = os.path.exists(self.output_dir / "val_losses.txt")
         # Training loop
-        for epoch in range(self.epochs):
+        for epoch in range(math.ceil(self.epochs)):
             losses = []
             for i, train_sample in enumerate(train_loader):
+                exact_epoch = epoch + i / len(train_loader)
+                if exact_epoch > self.epochs:
+                    break
                 x, y = (
                     train_sample["english"]["idx"],
                     train_sample["french"]["idx"],

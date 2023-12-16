@@ -133,7 +133,9 @@ class Decoder(nn.Module):
         super().__init__()
 
         self.alignment = Alignment(**alignment)
-        self.rnn = RNN(**rnn)
+        if traditional: 
+            rnn["input_size"] = rnn["hidden_size"] * 2
+        self.rnn = RNN(**rnn) 
         self.embedding = FCNN(
             input_size=rnn["hidden_size"],
             output_size=embedding["embedding_size"],
