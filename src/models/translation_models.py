@@ -35,7 +35,7 @@ class AlignAndTranslate(nn.Module):
         )
         self.optimizer = training_config.get(
             # "optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
-            "optimizer", torch.optim.Adam(self.parameters(), lr=1e-4, amsgrad=True)
+            "optimizer", torch.optim.Adam(self.parameters(), amsgrad=True,lr=1e-4)
         )
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
@@ -48,8 +48,8 @@ class AlignAndTranslate(nn.Module):
         self.load_last_checkpoints = training_config.get("load_last_model", False)
         self.beam_search_flag = training_config.get("beam_search", False)
         self.start_time = self.timestamp
-        self.Tx = kwargs.get("encoder", {})["vocab_size"]
-        self.Ty = training_config["output_vocab_size"]
+        self.Tx = training_config["Tx"]
+        self.Ty = training_config["Ty"]
 
         self.train_losses = []
         self.val_losses = [1e10]
@@ -83,11 +83,8 @@ class AlignAndTranslate(nn.Module):
 
         for param in self.parameters():
             L2_reg += torch.norm(param)
-
-        #clamp L2 regularization
-        # L2_reg = torch.clamp(L2_reg, 0, 1)
              
-        L2_reg*=1e-4
+        L2_reg*=3e-5
 
         loss += L2_reg
 
@@ -408,7 +405,6 @@ class AlignAndTranslate(nn.Module):
         # Initialize tensors for train and validation data
         idx_tensor_en = torch.zeros((len(sentences), self.Tx), dtype=torch.int16)
         idx_tensor_fr = torch.zeros((len(sentences), self.Ty), dtype=torch.int16)
-
         treated_sentences = []
         for sentence in sentences:
             sentence = tokenizer.tokenize_function(sentence)

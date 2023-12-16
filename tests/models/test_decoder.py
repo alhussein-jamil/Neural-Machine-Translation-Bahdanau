@@ -13,7 +13,7 @@ class TestDecoder(unittest.TestCase):
         self.embedding_size = 3
 
         self.sample_entry = torch.rand(3, self.seqlen, self.hidden_size * 2)  # batch_size, Tx, hidden_size * 2
-        self.sample_entry_trad = torch.rand(3, self.seqlen, 2 * self.hidden_size + self.embedding_size)
+
         self.vocab_size = 12
 
         config_alignment = dict(
@@ -67,7 +67,7 @@ class TestDecoder(unittest.TestCase):
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 
         decoder = Decoder(**self.config, traditional=True)
-        output, _= decoder(self.sample_entry_trad)
+        output, _= decoder(self.sample_entry)
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 
 

@@ -132,24 +132,41 @@ class Decoder(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.alignment = Alignment(**alignment)
+        #specify if we use the traditional encoder-decoder model
+        self.traditional = traditional
+
         if traditional: 
             rnn["input_size"] = rnn["hidden_size"] * 2
+            
+            
+        # Alignment module
+        self.alignment = Alignment(**alignment)
+        
+        
+
+        self.hidden_size = rnn["hidden_size"]
+
+        # GRU layer
         self.rnn = RNN(**rnn) 
+
+        # Embedding layer
         self.embedding = FCNN(
             input_size=rnn["hidden_size"],
             output_size=embedding["embedding_size"],
             device=embedding["device"],
         )
         # self.batch_norm_enc = nn.BatchNorm1d(2*rnn["hidden_size"])
-   
-        self.hidden_size = rnn["hidden_size"]
         self.output_nn = OutputNetwork(**output_nn)
-        self.traditional = traditional
+
+
+
+        # Used for the traditional model to return to the output size
         self.relaxation_nn = FCNN(
             input_size=rnn["hidden_size"],
             output_size=output_nn["vocab_size"],
         )
+
+        # Initialize context vector as a learnable parameter
         self.Ws = nn.Linear(rnn["hidden_size"], rnn["hidden_size"]).to(
             embedding["device"]
         )
