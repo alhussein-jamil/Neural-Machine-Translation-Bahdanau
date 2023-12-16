@@ -8,4 +8,5 @@ pip install --upgrade -r requirements.txt
 
 pip install --upgrade -e ./src
 
+pytest
 echo Environment setup completed.

@@ -64,7 +64,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         num_layers=1,
         device=device,
-        type="GRU",
+        type="LSTM",
         bidirectional=False,
     )
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         input_size=config["hidden_size"] * 3,
         output_size=config["Tx"],
         device=device,
-        dropout=0.1,
+        dropout=0.0,
     )
 
     output_nn_cfg = dict(
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         vocab_size=len(french_vocab) + 1,
         device=device,
-        dropout=0.1,
+        dropout=0.0,
     )
 
     decoder_embedding_cfg = dict(
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         rnn_num_layers=1,
         rnn_device=device,
         vocab_size=len(english_vocab) + 1,
-        rnn_type="GRU",
+        rnn_type="LSTM",
         embedding_size=config["embedding_size"],
     )
 
@@ -117,6 +117,9 @@ if __name__ == "__main__":
         epochs=config["epochs"],
         load_last_model=config["load_last_model"],
         beam_search = True,
+        Tx = config["Tx"],
+        Ty = config["Ty"],
+
     )
 
     # Define translator configuration
@@ -124,6 +127,20 @@ if __name__ == "__main__":
 
     # Create the model
     model = AlignAndTranslate(**translator_cfg).to(device)
+    english_phrases = [
+        "it should be noted that the marine environment is the least known of environments .",
+        "The agreement on the European Economic Area was signed in August 1992 ."
+        "Destruction of the equipment means that Syria can no longer produce new chemical weapons .",
+        "\" This will change my future with my family , \" the man said .",
+    ]
+    french_translation = english_phrases
+
+    to_translate = []
+    for en, fr in zip(english_phrases, french_translation):
+        to_translate.append(dict(translation=dict(en=en, fr=fr)))
+
+    translations = model.translate_sentence(to_translate)
+
 
     # Train the model
     if args.test:
@@ -133,12 +150,4 @@ if __name__ == "__main__":
         model.train(train_loader=train_dataloader, val_loader=val_dataloader)
 
 
-    english_phrases = [
-        "it should be noted that the marine environment is the least known of environments .",
-        "The agreement on the European Economic Area was signed in August 1992 ."
-        "Destruction of the equipment means that Syria can no longer produce new chemical weapons .",
-        "\" This will change my future with my family , \" the man said .",
-    ]
-    french_translation = []
-
-
+    breakpoint()
