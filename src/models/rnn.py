@@ -94,8 +94,10 @@ class RNN(nn.Module):
     def init_weights(self):
         for name, param in self.named_parameters():
             
-           if "weight" in name:
-                if "rnn" in name:
+            if "weight" in name:
+                if "rnn" in name or "lstm" in name or "gru" in name or "hh" in name:
                     init.orthogonal_(param.data)
                 else:
                     init.normal_(param.data, mean=0, std=0.01)
+            else: 
+                init.constant_(param.data, val=0)

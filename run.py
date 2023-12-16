@@ -72,7 +72,7 @@ if __name__ == "__main__":
         input_size=config["hidden_size"] * 3,
         output_size=config["Tx"],
         device=device,
-        dropout=0.3,
+        dropout=0.1,
     )
 
     output_nn_cfg = dict(
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         vocab_size=len(french_vocab) + 1,
         device=device,
-        dropout=0.3,
+        dropout=0.1,
     )
 
     decoder_embedding_cfg = dict(
@@ -131,3 +131,14 @@ if __name__ == "__main__":
         breakpoint()
     else:
         model.train(train_loader=train_dataloader, val_loader=val_dataloader)
+
+
+    english_phrases = [
+        "it should be noted that the marine environment is the least known of environments .",
+        "The agreement on the European Economic Area was signed in August 1992 ."
+        "Destruction of the equipment means that Syria can no longer produce new chemical weapons .",
+        "\" This will change my future with my family , \" the man said .",
+    ]
+    french_translation = []
+
+

@@ -39,10 +39,20 @@ class TokenizerWrapper:
         preprocessed_en = self.preprocess_text(examples["translation"]["en"])
         preprocessed_fr = self.preprocess_text(examples["translation"]["fr"])
 
+        tokenized_en = self.tokenizer_en.tokenize(preprocessed_en)
+        tokenized_fr = self.tokenizer_fr.tokenize(preprocessed_fr)
+
+        # length_en = len(tokenized_en)
+        # length_fr = len(tokenized_fr)
+
         return {
-            "tokenized_en": self.tokenizer_en.tokenize(preprocessed_en),
-            "tokenized_fr": self.tokenizer_fr.tokenize(preprocessed_fr),
+            "tokenized_en": tokenized_en,
+            "tokenized_fr": tokenized_fr,
+            # "Tx": length_en,
+            # "Ty": length_fr,
         }
+    
+    
 
 
 class toWordCount:
@@ -212,6 +222,7 @@ def pad_multiprocess(data, idx_en, idx_fr, Tx, Ty, kx, ky, multiprocess = True):
         process_data(data, Tx, kx, Ty, ky, idx_en, idx_fr)
 
 
+
 # import autotokenizer
 def load_data(
     train_len,
@@ -254,6 +265,7 @@ def load_data(
         val_len = len(val_data)
 
     tokenizer_wrapper = TokenizerWrapper(mt_en, mt_fr)
+
 
     # Tokenize and save train data if not already done
     if not os.path.exists(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len)):

@@ -15,8 +15,10 @@ import os
 from utils.plotting import *
 from global_variables import DATA_DIR
 
-from sacremoses import MosesDetokenizer
+from sacremoses import MosesDetokenizer, MosesTokenizer
 import math
+
+from data_preprocessing import *
 
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -33,7 +35,7 @@ class AlignAndTranslate(nn.Module):
         )
         self.optimizer = training_config.get(
             # "optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
-            "optimizer", torch.optim.Adam(self.parameters())
+            "optimizer", torch.optim.Adam(self.parameters(), lr=1e-4, amsgrad=True)
         )
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
@@ -46,6 +48,8 @@ class AlignAndTranslate(nn.Module):
         self.load_last_checkpoints = training_config.get("load_last_model", False)
         self.beam_search_flag = training_config.get("beam_search", False)
         self.start_time = self.timestamp
+        self.Tx = kwargs.get("encoder", {})["vocab_size"]
+        self.Ty = training_config["output_vocab_size"]
 
         self.train_losses = []
         self.val_losses = [1e10]
@@ -71,24 +75,31 @@ class AlignAndTranslate(nn.Module):
         decoder_output, allignments = self.decoder(encoder_output)
         return (decoder_output, allignments)
 
+    def calc_loss(self, output: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+
+        loss = self.criterion(output, y) 
+
+        L2_reg = torch.tensor(0.0).to(self.device)
+
+        for param in self.parameters():
+            L2_reg += torch.norm(param)
+
+        #clamp L2 regularization
+        # L2_reg = torch.clamp(L2_reg, 0, 1)
+             
+        L2_reg*=1e-4
+
+        loss += L2_reg
+
+        return loss
+
     def train_step(self, x: torch.Tensor, y: torch.Tensor) -> float:
         # Training step
         self.optimizer.zero_grad()
 
         output, allignments = self.forward(x.to(self.device))
 
-        loss = self.criterion(output, y)# / output.shape[-2]
-        L2_reg = torch.tensor(0.0).to(self.device)
-        
-        for param in self.parameters():
-            L2_reg += torch.norm(param)
-            
-        L2_reg*=1e-4
-        
-        #clamp L2 regularization
-        L2_reg = torch.clamp(L2_reg, 0, 1)
-        
-        loss += L2_reg
+        loss = self.calc_loss(output, y.to(self.device))
 
         loss.backward()
 
@@ -238,7 +249,7 @@ class AlignAndTranslate(nn.Module):
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output, allignments = self.forward(x.to(self.device))
-            loss = self.criterion(output, y.to(self.device))
+            loss = self.calc_loss(output, y.to(self.device))
             total_loss += loss.item()
             if i == 0:
                 self.display(output, allignments, x, y, val=True)
@@ -299,6 +310,7 @@ class AlignAndTranslate(nn.Module):
             for t in range(len_seq):
                 # Get the scores for the next time step
                 scores = F.log_softmax(tensor[b, t], dim=-1)
+                
                 if torch.max(scores) < threshold:
                     #put padding token
                     output[b, t] = len(self.french_vocab)
@@ -384,3 +396,38 @@ class AlignAndTranslate(nn.Module):
 
         bleu_scores = bleu_seq(original_sentences, predicted_sentences, n=4).reshape(max_len,-1)
         return torch.mean(bleu_scores, dim=1)
+
+
+    def translate_sentence(self, sentences: List[Dict[Any,Any]]):
+
+        tokenizer_en = MosesTokenizer(lang="en")
+        tokenizer_fr = MosesTokenizer(lang="fr")
+        tokenizer = TokenizerWrapper(tokenizer_en, tokenizer_fr)
+        to_id = toIdTransform(self.english_vocab, self.french_vocab, torch)
+
+        # Initialize tensors for train and validation data
+        idx_tensor_en = torch.zeros((len(sentences), self.Tx), dtype=torch.int16)
+        idx_tensor_fr = torch.zeros((len(sentences), self.Ty), dtype=torch.int16)
+
+        treated_sentences = []
+        for sentence in sentences:
+            sentence = tokenizer.tokenize_function(sentence)
+            sentence = to_id(sentence)  
+            treated_sentences.append(sentence)
+        
+        pad_multiprocess(treated_sentences, idx_tensor_en, idx_tensor_fr, self.Tx, self.Ty, len(self.english_vocab), len(self.french_vocab), False)
+
+        output, _ = self.forward(idx_tensor_en.to(self.device))
+    
+        output[:, :, -2] = torch.min(
+            output
+        )  # set the <unk> token to the minimum value so that it is not selected
+        prediction_idx = (
+            self.beam_search(output, 5)
+            if self.beam_search_flag
+            else torch.argmax(output, dim=-1)
+        )
+
+        sample = self.sample_translation(idx_tensor_en, prediction_idx, idx_tensor_fr)
+
+        return sample[1]
