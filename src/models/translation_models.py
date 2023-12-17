@@ -122,7 +122,7 @@ class AlignAndTranslate(nn.Module):
     def load_model(self, path: str) -> None:
         # Check compatibility
         try:
-            state_dict = torch.load(path)
+            state_dict = torch.load(path, map_location=self.device)
             self.load_state_dict(state_dict)
             print(f"Model loaded from {path}")
         except RuntimeError as e:
