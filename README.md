@@ -2,8 +2,22 @@
 Neural Machine Translation by Jointly Learning to Align and Translate paper implementation 
 https://arxiv.org/abs/1409.0473v7
 
+## Installation
+Try installing using the install.bat other wise follow the general proceedure.
+
+```
+conda create -n mlaproject python=3.10 -y
+conda activate mlaproject
+pip install --upgrade -r requirements.txt
+pip install --upgrade -e ./src
+pytest
+python
+import torch 
+torch.cuda.is_available()
+```
+The last command should return True if you have a GPU available.
+
 ## Requirements
-installation 
 ```
 pip install --upgrade -r requirements.txt
 pip install -e ./src
