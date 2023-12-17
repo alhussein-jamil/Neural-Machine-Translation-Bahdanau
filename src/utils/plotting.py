@@ -3,7 +3,9 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from matplotlib import pyplot as plt
+
 from global_variables import DATA_DIR
+
 
 def plot_alignment(
     data: Dict[str, Tuple[List[str], List[str], np.ndarray]],
@@ -26,7 +28,7 @@ def plot_alignment(
     h, w = (len(data) + 1) // 2, 2 if len(data) % 2 == 0 else 1
 
     # Set the figure size based on the number of subplots
-    fig_size = (10* w, h * 10)
+    fig_size = (10 * w, h * 10)
 
     # Create subplots
     _, axes = plt.subplots(h, w, figsize=fig_size)
@@ -39,18 +41,26 @@ def plot_alignment(
 
         # Get the current subplot
         ax = axes[i // 2, i % 2]
-        alignment_max, alignment_min = np.max(alignment, axis=1), np.min(alignment, axis=1)
-        #make allignment values between 0 and 1 with 1 being the max value
-        alignment = (alignment - alignment_min[:, None]) / (alignment_max[:, None] - alignment_min[:, None])
+        alignment_max, alignment_min = np.max(alignment, axis=1), np.min(
+            alignment, axis=1
+        )
+        # make allignment values between 0 and 1 with 1 being the max value
+        alignment = (alignment - alignment_min[:, None]) / (
+            alignment_max[:, None] - alignment_min[:, None]
+        )
 
         # Plot the alignment matrix
-        ax.imshow(alignment, cmap="gray", aspect="auto")  # Set aspect to "auto" to fill the entire width
+        ax.imshow(
+            alignment, cmap="gray", aspect="auto"
+        )  # Set aspect to "auto" to fill the entire width
 
         # Set ticks and labels
         ax.set_xticks(np.arange(len(phrase1)))
         ax.set_yticks(np.arange(len(phrase2)))
         ax.xaxis.tick_top()
-        ax.set_xticklabels(phrase1, rotation=90)  # Rotate the text at the top by 90 degrees
+        ax.set_xticklabels(
+            phrase1, rotation=90
+        )  # Rotate the text at the top by 90 degrees
         ax.set_yticklabels(phrase2)
 
         # Set title for the subplot
@@ -63,6 +73,7 @@ def plot_alignment(
         plt.show()
 
     plt.close()
+
 
 def BELU_score_plot(data: Dict[str, np.ndarray], save_path: str = None):
     """

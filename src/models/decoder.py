@@ -9,18 +9,39 @@ from models.rnn import RNN
 
 
 class Alignment(nn.Module):
-    def __init__(self, input_size: int, output_size: int, device: torch.device, dropout: float=0.0) -> None:
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        device: torch.device,
+        dropout: float = 0.0,
+    ) -> None:
         super().__init__()
         self.hidden_size = input_size // 3
 
         self.nn_h = FCNN(
-            input_size=self.hidden_size * 2, output_size=self.hidden_size, device=device, dropout=dropout, mean=0, std=0.001
+            input_size=self.hidden_size * 2,
+            output_size=self.hidden_size,
+            device=device,
+            dropout=dropout,
+            mean=0,
+            std=0.001,
         )
         self.nn_s = FCNN(
-            input_size=self.hidden_size, output_size=self.hidden_size, device=device , dropout=dropout, mean=0, std=0.001
+            input_size=self.hidden_size,
+            output_size=self.hidden_size,
+            device=device,
+            dropout=dropout,
+            mean=0,
+            std=0.001,
         )
         self.nn_v = FCNN(
-            input_size=self.hidden_size, output_size=output_size, device=device , dropout=dropout, mean=0, std=0.0
+            input_size=self.hidden_size,
+            output_size=output_size,
+            device=device,
+            dropout=dropout,
+            mean=0,
+            std=0.0,
         )
 
     def forward(self, s_emb: torch.Tensor, h_emb: torch.Tensor) -> torch.Tensor:
@@ -65,24 +86,24 @@ class OutputNetwork(nn.Module):
         """
         super().__init__()
 
-        #matrix for s_i
+        # matrix for s_i
         self.u_o = FCNN(
-            input_size= hidden_size, 
-            output_size= 2 * max_out_units,
+            input_size=hidden_size,
+            output_size=2 * max_out_units,
             **kwargs,
         )
 
-        #matrix for y_i
+        # matrix for y_i
         self.v_o = FCNN(
-            input_size= embedding_size,
-            output_size= 2 * max_out_units,
+            input_size=embedding_size,
+            output_size=2 * max_out_units,
             **kwargs,
         )
 
-        #matrix for c_i
+        # matrix for c_i
         self.c_o = FCNN(
-            input_size= 2 * hidden_size,
-            output_size= 2 * max_out_units,
+            input_size=2 * hidden_size,
+            output_size=2 * max_out_units,
             **kwargs,
         )
 
@@ -111,11 +132,11 @@ class OutputNetwork(nn.Module):
         # based on the article Maxout Networks
         t_tilde = self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i)
 
-        #sep odd and even
-        t_even = t_tilde[:, 0 : : 2]
-        t_odd  = t_tilde[:, 1 : : 2]
+        # sep odd and even
+        t_even = t_tilde[:, 0::2]
+        t_odd = t_tilde[:, 1::2]
 
-        #maxout
+        # maxout
         t = torch.max(t_even, t_odd)
 
         return self.output_nn(t)
@@ -132,22 +153,19 @@ class Decoder(nn.Module):
     ) -> None:
         super().__init__()
 
-        #specify if we use the traditional encoder-decoder model
+        # specify if we use the traditional encoder-decoder model
         self.traditional = traditional
 
-        if traditional: 
+        if traditional:
             rnn["input_size"] = rnn["hidden_size"] * 2
-            
-            
+
         # Alignment module
         self.alignment = Alignment(**alignment)
-        
-        
 
         self.hidden_size = rnn["hidden_size"]
 
         # GRU layer
-        self.rnn = RNN(**rnn) 
+        self.rnn = RNN(**rnn)
 
         # Embedding layer
         self.embedding = FCNN(
@@ -157,8 +175,6 @@ class Decoder(nn.Module):
         )
         # self.batch_norm_enc = nn.BatchNorm1d(2*rnn["hidden_size"])
         self.output_nn = OutputNetwork(**output_nn)
-
-
 
         # Used for the traditional model to return to the output size
         self.relaxation_nn = FCNN(
@@ -190,7 +206,7 @@ class Decoder(nn.Module):
 
         if not self.traditional:
             # Initialize context vector as a learnable parameter
-            s_i = F.tanh( self.Ws(h[:, 0, self.rnn.hidden_size:])).view(
+            s_i = F.tanh(self.Ws(h[:, 0, self.rnn.hidden_size :])).view(
                 self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
                 h.size(0),
                 self.rnn.hidden_size,
@@ -231,7 +247,7 @@ class Decoder(nn.Module):
             output_rnn, _ = self.rnn(h)
             relaxed = self.relaxation_nn(output_rnn)
             output[:, :, :] = relaxed
-    
+
         return output, torch.stack(
             allignments, dim=1
         ) if not self.traditional else torch.zeros(h.shape[0], h.shape[1], h.shape[1])

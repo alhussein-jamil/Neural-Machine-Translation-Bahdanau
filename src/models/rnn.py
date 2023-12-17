@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn import init
 
+
 class RNN(nn.Module):
     """
     Recurrent Neural Network (RNN) Module.
@@ -54,7 +55,9 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.input_size = input_size
-        network_type = nn.RNN if type == "RNN" else nn.LSTM if type == "LSTM" else nn.GRU
+        network_type = (
+            nn.RNN if type == "RNN" else nn.LSTM if type == "LSTM" else nn.GRU
+        )
         self.rnn = network_type(
             input_size,
             hidden_size,
@@ -96,15 +99,13 @@ class RNN(nn.Module):
         # Forward propagate RNN
         out, hidden = self.rnn(x, h0 if c0 is None else (h0, c0))
         return out, hidden[0] if isinstance(hidden, tuple) else hidden
-    
 
     def init_weights(self):
         for name, param in self.named_parameters():
-            
             if "weight" in name:
                 if "rnn" in name or "lstm" in name or "gru" in name or "hh" in name:
                     init.orthogonal_(param.data)
                 else:
                     init.normal_(param.data, mean=0, std=0.01)
-            else: 
+            else:
                 init.constant_(param.data, val=0)

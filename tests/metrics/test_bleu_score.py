@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from metrics.bleu import bleu_tensor, bleu_seq
+from metrics.bleu import bleu_seq, bleu_tensor
 
 
 class TestBLEUScore(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestBLEUScore(unittest.TestCase):
         self.candidate_sequences = ["this is a test", "this is another test"]
 
     def test_bleu_score_tensors(self):
-        result = bleu_tensor(self.reference_tensor, self.candidate_tensor,2)
+        result = bleu_tensor(self.reference_tensor, self.candidate_tensor, 2)
 
         self.assertIsInstance(result, torch.Tensor)
         scores = torch.tensor([1.0000, 0.75])
@@ -25,7 +25,7 @@ class TestBLEUScore(unittest.TestCase):
             self.assertAlmostEqual(r.item(), scores[i].item(), places=4)
 
     def test_bleu_score_sequences(self):
-        result = bleu_seq(self.reference_sequences, self.candidate_sequences,2)
+        result = bleu_seq(self.reference_sequences, self.candidate_sequences, 2)
 
         self.assertIsInstance(result, torch.Tensor)
         scores = torch.tensor([0.3333, 1.0])

@@ -24,7 +24,7 @@ class Loss(nn.Module):
             y = y.long()
             y_idx = F.one_hot(y, num_classes=x.shape[-1]).float()
             return self.loss_fn(x, y_idx)
-        
+
         elif isinstance(self.loss_fn, nn.NLLLoss):
             _, _, vocab_size = x.shape
             # Reshape x for NLLLoss
@@ -33,6 +33,6 @@ class Loss(nn.Module):
             x = F.log_softmax(x, dim=1)
             y = y.view(-1).long()
             return self.loss_fn(x, y)
-        
+
         else:
             raise ValueError("Unsupported loss function type")

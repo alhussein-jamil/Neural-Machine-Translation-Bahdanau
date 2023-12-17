@@ -2,8 +2,8 @@ from typing import List
 
 import torch
 from torch import nn
-
 from torch.nn import init
+
 
 class FCNN(nn.Module):
     def __init__(
@@ -34,7 +34,10 @@ class FCNN(nn.Module):
         self.fc.append(
             nn.Linear(
                 self.input_size,
-                self.hidden_sizes[0] if len(self.hidden_sizes) > 0 else self.output_size)
+                self.hidden_sizes[0]
+                if len(self.hidden_sizes) > 0
+                else self.output_size,
+            )
         )
 
         # Add the remaining fully-connected layers
@@ -82,10 +85,10 @@ class FCNN(nn.Module):
         x = self.last_layer_activation(x)
 
         return x
-    
+
     def init_weights(self, mean: float = 0, std: float = 0.01):
         for name, param in self.named_parameters():
-            if 'weight' in name:
+            if "weight" in name:
                 init.normal_(param.data, mean=mean, std=std)
-            elif 'bias' in name:
+            elif "bias" in name:
                 init.constant_(param.data, 0)

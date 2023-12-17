@@ -1,32 +1,83 @@
 import argparse
 
 import torch
+import yaml
 
 from models.translation_models import AlignAndTranslate
 from src.data_preprocessing import load_data
-import yaml
+
 # Define command-line arguments
 parser = argparse.ArgumentParser()
 
 if __name__ == "__main__":
     # Parse command-line arguments
-    parser.add_argument("--train_len", type=int, default=100000, help="Number of training examples")
-    parser.add_argument("--val_len", type=int, default=None, help="Number of validation examples")
-    parser.add_argument("--Tx", type=int, default=10, help="Length of the input sequence")
-    parser.add_argument("--Ty", type=int, default=10, help="Length of the output sequence")
-    parser.add_argument("--hidden_size", "-n", type=int, default=256, help="Size of the hidden layers")
-    parser.add_argument("--embedding_size", "-m", type=int, default=256, help="Size of the embedding")
-    parser.add_argument("--max_out_units", "-l", type=int, default=64, help="Size of the hidden layers")
-    parser.add_argument("--vocab_size_en", type=int, default=10000, help="Size of the English vocabulary")
-    parser.add_argument("--vocab_size_fr", type=int, default=10000, help="Size of the French vocabulary")
-    parser.add_argument("--batch_size", type=int, default=64, help="Size of the batches")
+    parser.add_argument(
+        "--train_len", type=int, default=100000, help="Number of training examples"
+    )
+    parser.add_argument(
+        "--val_len", type=int, default=None, help="Number of validation examples"
+    )
+    parser.add_argument(
+        "--Tx", type=int, default=10, help="Length of the input sequence"
+    )
+    parser.add_argument(
+        "--Ty", type=int, default=10, help="Length of the output sequence"
+    )
+    parser.add_argument(
+        "--hidden_size", "-n", type=int, default=256, help="Size of the hidden layers"
+    )
+    parser.add_argument(
+        "--embedding_size", "-m", type=int, default=256, help="Size of the embedding"
+    )
+    parser.add_argument(
+        "--max_out_units", "-l", type=int, default=64, help="Size of the hidden layers"
+    )
+    parser.add_argument(
+        "--vocab_size_en",
+        type=int,
+        default=10000,
+        help="Size of the English vocabulary",
+    )
+    parser.add_argument(
+        "--vocab_size_fr", type=int, default=10000, help="Size of the French vocabulary"
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=64, help="Size of the batches"
+    )
     parser.add_argument("--epochs", type=int, default=1000, help="Number of epochs")
-    parser.add_argument("--vocab_source", type=str, default="train", help="Path to the vocabulary file")
-    parser.add_argument("--load_last_model", action="store_true", default=True, help="Load the last model")
-    parser.add_argument("--encoder_decoder", action="store_true", default=False, help="Use the encoder-decoder model")
-    parser.add_argument("--config_file", type=str, default="translation_config.yaml", help="Path to the config file")
-    parser.add_argument("--ignore_config", action="store_true", default=False, help="Ignore the config file")
-    parser.add_argument("--test", action="store_true", default=False, help="Run the model in evaluation mode")
+    parser.add_argument(
+        "--vocab_source", type=str, default="train", help="Path to the vocabulary file"
+    )
+    parser.add_argument(
+        "--load_last_model",
+        action="store_true",
+        default=True,
+        help="Load the last model",
+    )
+    parser.add_argument(
+        "--encoder_decoder",
+        action="store_true",
+        default=False,
+        help="Use the encoder-decoder model",
+    )
+    parser.add_argument(
+        "--config_file",
+        type=str,
+        default="translation_config.yaml",
+        help="Path to the config file",
+    )
+    parser.add_argument(
+        "--ignore_config",
+        action="store_true",
+        default=False,
+        help="Ignore the config file",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        default=False,
+        help="Run the model in evaluation mode",
+    )
 
     args = parser.parse_args()
     device = "cpu" if not torch.cuda.is_available() else "cuda"
@@ -47,15 +98,15 @@ if __name__ == "__main__":
         (val_data, val_dataloader),
         (english_vocab, french_vocab),
     ) = load_data(
-        train_len=config['train_len'],
-        val_len=config['val_len'],
-        kx=config['vocab_size_en'],
-        ky=config['vocab_size_fr'],
-        Tx=config['Tx'],
-        Ty=config['Ty'],
-        batch_size=config['batch_size'],
-        vocab_source=config['vocab_source'],
-        mp=config["multiprocessing"]
+        train_len=config["train_len"],
+        val_len=config["val_len"],
+        kx=config["vocab_size_en"],
+        ky=config["vocab_size_fr"],
+        Tx=config["Tx"],
+        Ty=config["Ty"],
+        batch_size=config["batch_size"],
+        vocab_source=config["vocab_source"],
+        mp=config["multiprocessing"],
     )
 
     # Define configuration for the decoder
@@ -94,8 +145,7 @@ if __name__ == "__main__":
         rnn=config_rnn_decoder,
         output_nn=output_nn_cfg,
         embedding=decoder_embedding_cfg,
-        traditional = config["encoder_decoder"],
-
+        traditional=config["encoder_decoder"],
     )
 
     # Define configuration for the encoder
@@ -116,14 +166,15 @@ if __name__ == "__main__":
         french_vocab=french_vocab,
         epochs=config["epochs"],
         load_last_model=config["load_last_model"],
-        beam_search = True,
-        Tx = config["Tx"],
-        Ty = config["Ty"],
-
+        beam_search=True,
+        Tx=config["Tx"],
+        Ty=config["Ty"],
     )
 
     # Define translator configuration
-    translator_cfg = dict(encoder=config_encoder, decoder=config_decoder, training=training_cfg)
+    translator_cfg = dict(
+        encoder=config_encoder, decoder=config_decoder, training=training_cfg
+    )
 
     # Create the model
     model = AlignAndTranslate(**translator_cfg).to(device)
@@ -131,7 +182,7 @@ if __name__ == "__main__":
         "it should be noted that the marine environment is the least known of environments .",
         "The agreement on the European Economic Area was signed in August 1992 ."
         "Destruction of the equipment means that Syria can no longer produce new chemical weapons .",
-        "\" This will change my future with my family , \" the man said .",
+        '" This will change my future with my family , " the man said .',
     ]
     french_translation = english_phrases
 
@@ -141,13 +192,11 @@ if __name__ == "__main__":
 
     translations = model.translate_sentence(to_translate)
 
-
     # Train the model
     if args.test:
-        evaluation = model.eval(val_dataloader,max_len = args.Ty)
+        evaluation = model.eval(val_dataloader, max_len=args.Ty)
         breakpoint()
     else:
         model.train(train_loader=train_dataloader, val_loader=val_dataloader)
-
 
     breakpoint()

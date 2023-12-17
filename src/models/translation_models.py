@@ -1,24 +1,21 @@
+import datetime
+import math
+import os
 from typing import List
 
 import torch
+from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch import nn
 from torch.nn import functional as F
 
-from metrics.losses import Loss
+from data_preprocessing import *
+from global_variables import DATA_DIR
 from metrics import bleu_seq
+from metrics.losses import Loss
 from models.decoder import Decoder
 from models.encoder import Encoder
-
-import datetime
-import os
-
 from utils.plotting import *
-from global_variables import DATA_DIR
 
-from sacremoses import MosesDetokenizer, MosesTokenizer
-import math
-
-from data_preprocessing import *
 
 class AlignAndTranslate(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -30,12 +27,11 @@ class AlignAndTranslate(nn.Module):
 
         # Training configuration
         training_config = kwargs.get("training", {})
-        self.criterion = training_config.get(
-            "criterion", Loss(nn.NLLLoss())
-        )
+        self.criterion = training_config.get("criterion", Loss(nn.NLLLoss()))
         self.optimizer = training_config.get(
             # "optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
-            "optimizer", torch.optim.Adam(self.parameters(), amsgrad=True,lr=1e-4)
+            "optimizer",
+            torch.optim.Adam(self.parameters(), amsgrad=True, lr=1e-4),
         )
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
@@ -76,15 +72,14 @@ class AlignAndTranslate(nn.Module):
         return (decoder_output, allignments)
 
     def calc_loss(self, output: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-
-        loss = self.criterion(output, y) 
+        loss = self.criterion(output, y)
 
         L2_reg = torch.tensor(0.0).to(self.device)
 
         for param in self.parameters():
             L2_reg += torch.norm(param)
-             
-        L2_reg*=3e-5
+
+        L2_reg *= 3e-5
 
         loss += L2_reg
 
@@ -100,7 +95,7 @@ class AlignAndTranslate(nn.Module):
 
         loss.backward()
 
-        #Gradient Value Clipping
+        # Gradient Value Clipping
         nn.utils.clip_grad_norm_(self.parameters(), 1.0)
 
         self.optimizer.step()
@@ -184,14 +179,18 @@ class AlignAndTranslate(nn.Module):
             self.train_losses.append(sum(losses) / len(losses))
 
             losses_exist = os.path.exists(self.output_dir / "losses.txt")
-                
+
             with open(
                 self.output_dir / "losses.txt",
                 "a" if not losses_exist else "w",
                 encoding="utf-8",
             ) as myfile:
                 myfile.write(
-                    "{} {} {}\n".format(self.train_losses[-1], self.val_losses[-1], torch.mean(self.bleu_scores[-1]).float())   
+                    "{} {} {}\n".format(
+                        self.train_losses[-1],
+                        self.val_losses[-1],
+                        torch.mean(self.bleu_scores[-1]).float(),
+                    )
                 )
 
             if sum(val_losses) / len(val_losses) < self.best_val_loss:
@@ -206,10 +205,10 @@ class AlignAndTranslate(nn.Module):
         y: torch.tensor,
         val: bool = True,
     ):
-        random_idx = torch.randint(0, len(x), (4,)) 
+        random_idx = torch.randint(0, len(x), (4,))
         prediction = output[random_idx]
         prediction[:, :, -2] = torch.min(
-           prediction
+            prediction
         )  # set the <unk> token to the minimum value so that it is not selected
         prediction_idx = (
             self.beam_search(prediction, 5)
@@ -217,13 +216,9 @@ class AlignAndTranslate(nn.Module):
             else torch.argmax(prediction, dim=-1)
         )
 
-
         sample = self.sample_translation(x[random_idx], prediction_idx, y[random_idx])
 
-        self.bleu_scores.append(
-            bleu_seq(sample[1], sample[2], n=4)
-        )
-
+        self.bleu_scores.append(bleu_seq(sample[1], sample[2], n=4))
 
         name = "Validation" if val else "Training"
         translations = f"{name} samples:\n"
@@ -311,7 +306,6 @@ class AlignAndTranslate(nn.Module):
                 # Generate new candidates by expanding the existing ones
                 new_candidates = []
                 for seq, score in candidates:
-
                     # Calculate the cumulative scores for all words in the candidate sequence
                     cumulative_scores = score + scores
 
@@ -339,13 +333,23 @@ class AlignAndTranslate(nn.Module):
                         if repition:
                             continue
                         if scores[i] < threshold:
-                            #add padding 
+                            # add padding
                             new_seq = torch.cat(
-                            [seq, torch.tensor([len(self.french_vocab)], dtype=torch.long, device=device)]
-                        )
-                        else: 
+                                [
+                                    seq,
+                                    torch.tensor(
+                                        [len(self.french_vocab)],
+                                        dtype=torch.long,
+                                        device=device,
+                                    ),
+                                ]
+                            )
+                        else:
                             new_seq = torch.cat(
-                                [seq, torch.tensor([i], dtype=torch.long, device=device)]
+                                [
+                                    seq,
+                                    torch.tensor([i], dtype=torch.long, device=device),
+                                ]
                             )
                         new_score = cumulative_scores[i]
                         new_candidates.append((new_seq, new_score))
@@ -366,7 +370,9 @@ class AlignAndTranslate(nn.Module):
 
         return output
 
-    def plot_attention(self, source, prediction, allignments, titles, val=True, path=None):
+    def plot_attention(
+        self, source, prediction, allignments, titles, val=True, path=None
+    ):
         source_list = [s.split(" ") for s in source]
         prediction_list = [p.split(" ") for p in prediction]
         alls = []
@@ -375,14 +381,24 @@ class AlignAndTranslate(nn.Module):
             alls.append(alignments[i, : len(prediction_list[i]), : len(source_list[i])])
 
         data = {
-            f"phrase {i}: bleu-score of {int(titles[i]*100.0)}%": (source_list[i], prediction_list[i], alls[i])
+            f"phrase {i}: bleu-score of {int(titles[i]*100.0)}%": (
+                source_list[i],
+                prediction_list[i],
+                alls[i],
+            )
             for i in range(len(source_list))
         }
-        return plot_alignment(data, save_path=self.plot_dir / (self.timestamp+"_{}".format("val" if val else "train")+ ".png") if path is None else None)
+        return plot_alignment(
+            data,
+            save_path=self.plot_dir
+            / (self.timestamp + "_{}".format("val" if val else "train") + ".png")
+            if path is None
+            else None,
+        )
 
     def eval(self, dataloader, max_len):
-        #try sentences of length till Tx
-        bleu_scores = torch.zeros(max_len,len(dataloader))
+        # try sentences of length till Tx
+        bleu_scores = torch.zeros(max_len, len(dataloader))
         original_sentences = []
         predicted_sentences = []
         for i, val_sample in enumerate(dataloader):
@@ -390,16 +406,18 @@ class AlignAndTranslate(nn.Module):
             output, _ = self.forward(x.to(self.device))
             prediction_idx = torch.argmax(output, dim=-1)
             for length in range(1, max_len):
-                translation = self.sample_translation(x[:length], prediction_idx[:length], y[:length])
+                translation = self.sample_translation(
+                    x[:length], prediction_idx[:length], y[:length]
+                )
                 original_sentences += translation[2]
                 predicted_sentences += translation[1]
 
-        bleu_scores = bleu_seq(original_sentences, predicted_sentences, n=4).reshape(max_len,-1)
+        bleu_scores = bleu_seq(original_sentences, predicted_sentences, n=4).reshape(
+            max_len, -1
+        )
         return torch.mean(bleu_scores, dim=1)
 
-
-    def translate_sentence(self, sentences: List[Dict[Any,Any]]):
-
+    def translate_sentence(self, sentences: List[Dict[Any, Any]]):
         tokenizer_en = MosesTokenizer(lang="en")
         tokenizer_fr = MosesTokenizer(lang="fr")
         tokenizer = TokenizerWrapper(tokenizer_en, tokenizer_fr)
@@ -411,58 +429,65 @@ class AlignAndTranslate(nn.Module):
         treated_sentences = []
         for sentence in sentences:
             sentence = tokenizer.tokenize_function(sentence)
-            sentence = to_id(sentence)  
+            sentence = to_id(sentence)
             treated_sentences.append(sentence)
-        
-        pad_multiprocess(treated_sentences, idx_tensor_en, idx_tensor_fr, self.Tx, self.Ty, len(self.english_vocab), len(self.french_vocab), False)
+
+        pad_multiprocess(
+            treated_sentences,
+            idx_tensor_en,
+            idx_tensor_fr,
+            self.Tx,
+            self.Ty,
+            len(self.english_vocab),
+            len(self.french_vocab),
+            False,
+        )
 
         output, alignment = self.forward(idx_tensor_en.to(self.device))
-    
+
         output[:, :, -2] = torch.min(
             output
         )  # set the <unk> token to the minimum value so that it is not selected
         prediction_idx = (
-            self.beam_search(output,3,-2.8) if self.beam_search_flag else self.greedy_search_batch(output)
-            
+            self.beam_search(output, 3, -2.8)
+            if self.beam_search_flag
+            else self.greedy_search_batch(output)
         )
 
         sample = self.sample_translation(idx_tensor_en, prediction_idx, idx_tensor_fr)
 
         return sample, alignment
 
-
     def greedy_search_batch(self, tensors, avoid_repetition=True):
-        batch_size, len_seq, vocab_size = tensors.size()
+        batch_size, len_seq, _ = tensors.size()
         output = torch.zeros(batch_size, len_seq, dtype=torch.long)
-        softmaxed_ouput = F.softmax(tensors*1.2, dim=-1)
+        softmaxed_ouput = F.softmax(tensors * 1.2, dim=-1)
 
         for b in range(batch_size):
             tensor = tensors[b]
             for i in range(len_seq):
                 if avoid_repetition:
-                    # pick an index with probability propotional to the softmaxed ouput 
+                    # pick an index with probability propotional to the softmaxed ouput
                     found = False
                     while not found:
-                        idx = torch.multinomial(softmaxed_ouput[b,i], 1).item()
+                        idx = torch.multinomial(softmaxed_ouput[b, i], 1).item()
                         repetition = False
                         # check repetitions
                         for length in range(i):
                             concatenated = torch.cat(
                                 [
-                                    output[b, i - length :i],
+                                    output[b, i - length : i],
                                     torch.tensor([idx], dtype=torch.int64),
                                 ]
                             )
-                            previous = output[
-                                b, i - 2 * length - 1 : i - length
-                            ]
+                            previous = output[b, i - 2 * length - 1 : i - length]
                             if len(previous) == len(concatenated):
                                 repetition = (concatenated == previous).all()
                             if repetition:
                                 break
                         if not repetition:
                             output[b, i] = idx
-                            found = True 
+                            found = True
                             break
                 else:
                     # Simply get the index of the maximum value in tensor[i]

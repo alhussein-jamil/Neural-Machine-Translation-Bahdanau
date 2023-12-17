@@ -12,7 +12,9 @@ class TestDecoder(unittest.TestCase):
         self.max_out_units = 13
         self.embedding_size = 3
 
-        self.sample_entry = torch.rand(3, self.seqlen, self.hidden_size * 2)  # batch_size, Tx, hidden_size * 2
+        self.sample_entry = torch.rand(
+            3, self.seqlen, self.hidden_size * 2
+        )  # batch_size, Tx, hidden_size * 2
 
         self.vocab_size = 12
 
@@ -54,7 +56,6 @@ class TestDecoder(unittest.TestCase):
         return super().setUp()
 
     def test_initalization(self):
-
         decoder = Decoder(**self.config, traditional=False)
         self.assertIsInstance(decoder, torch.nn.Module)
 
@@ -63,11 +64,11 @@ class TestDecoder(unittest.TestCase):
 
     def test_forward(self):
         decoder = Decoder(**self.config, traditional=False)
-        output, _= decoder(self.sample_entry)
+        output, _ = decoder(self.sample_entry)
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 
         decoder = Decoder(**self.config, traditional=True)
-        output, _= decoder(self.sample_entry)
+        output, _ = decoder(self.sample_entry)
         self.assertEqual(output.shape, torch.Size([3, 5, 12]))
 
 

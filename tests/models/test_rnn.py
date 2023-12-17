@@ -29,7 +29,6 @@ class TestRNN(unittest.TestCase):
             type=self.type,
         ).to(self.device)
 
-
         # Check if the model is an instance of nn.Module
         self.assertIsInstance(self.model, nn.Module)
 
@@ -44,7 +43,11 @@ class TestRNN(unittest.TestCase):
         # Check if the RNN layer is created with the correct parameters
         self.assertIsInstance(
             self.model.rnn,
-            nn.RNN if self.type == "RNN" else nn.LSTM if self.type == "LSTM" else nn.GRU,
+            nn.RNN
+            if self.type == "RNN"
+            else nn.LSTM
+            if self.type == "LSTM"
+            else nn.GRU,
         )
         self.assertEqual(self.model.rnn.input_size, self.input_size)
         self.assertEqual(self.model.rnn.hidden_size, self.hidden_size)
@@ -90,7 +93,11 @@ class TestRNN(unittest.TestCase):
         # Check if the RNN layer is created with the correct parameters
         self.assertIsInstance(
             self.model.rnn,
-            nn.RNN if self.type == "RNN" else nn.LSTM if self.type == "LSTM" else nn.GRU,
+            nn.RNN
+            if self.type == "RNN"
+            else nn.LSTM
+            if self.type == "LSTM"
+            else nn.GRU,
         )
         self.assertEqual(self.model.rnn.input_size, self.input_size)
         self.assertEqual(self.model.rnn.hidden_size, self.hidden_size)
@@ -126,7 +133,11 @@ class TestRNN(unittest.TestCase):
         # Check if the RNN layer is created with the correct parameters
         self.assertIsInstance(
             self.model.rnn,
-            nn.RNN if self.type == "RNN" else nn.LSTM if self.type == "LSTM" else nn.GRU,
+            nn.RNN
+            if self.type == "RNN"
+            else nn.LSTM
+            if self.type == "LSTM"
+            else nn.GRU,
         )
         self.assertEqual(self.model.rnn.input_size, self.input_size)
         self.assertEqual(self.model.rnn.hidden_size, self.hidden_size)
@@ -135,6 +146,7 @@ class TestRNN(unittest.TestCase):
         self.assertTrue(self.model.rnn.batch_first)
         self.assertEqual(self.model.rnn.dropout, self.dropout)
         self.forward_pass()
-        
+
+
 if __name__ == "__main__":
     unittest.main()
