@@ -3,5 +3,4 @@
 *__pycache__*
 *cache*
 *data/local_data
-*.ipynb
 .history/
