@@ -2,5 +2,6 @@
 *cpython*
 *__pycache__*
 *cache*
-*data/local_data
+*data/local_data/processed_data
+*data/local_data/trained_models
 .history/
