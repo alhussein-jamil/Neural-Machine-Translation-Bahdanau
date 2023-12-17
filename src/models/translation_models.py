@@ -307,13 +307,11 @@ class AlignAndTranslate(nn.Module):
             for t in range(len_seq):
                 # Get the scores for the next time step
                 scores = F.log_softmax(tensor[b, t], dim=-1)
-                
-                if torch.max(scores) < threshold:
-                    #put padding token
-                    output[b, t] = len(self.french_vocab)
+
                 # Generate new candidates by expanding the existing ones
                 new_candidates = []
                 for seq, score in candidates:
+
                     # Calculate the cumulative scores for all words in the candidate sequence
                     cumulative_scores = score + scores
 
@@ -340,17 +338,22 @@ class AlignAndTranslate(nn.Module):
 
                         if repition:
                             continue
-
-                        new_seq = torch.cat(
-                            [seq, torch.tensor([i], dtype=torch.long, device=device)]
+                        if scores[i] < threshold:
+                            #add padding 
+                            new_seq = torch.cat(
+                            [seq, torch.tensor([len(self.french_vocab)], dtype=torch.long, device=device)]
                         )
+                        else: 
+                            new_seq = torch.cat(
+                                [seq, torch.tensor([i], dtype=torch.long, device=device)]
+                            )
                         new_score = cumulative_scores[i]
                         new_candidates.append((new_seq, new_score))
 
-                # Select the top-k candidates from all expanded candidates
-                new_candidates = sorted(
-                    new_candidates, key=lambda x: x[1], reverse=True
-                )[:beam_size]
+                    # Select the top-k candidates from all expanded candidates
+                    new_candidates = sorted(
+                        new_candidates, key=lambda x: x[1], reverse=True
+                    )[:beam_size]
 
                 # Update the candidates for the next time step
                 candidates = new_candidates
@@ -419,11 +422,50 @@ class AlignAndTranslate(nn.Module):
             output
         )  # set the <unk> token to the minimum value so that it is not selected
         prediction_idx = (
-            self.beam_search(output, 5)
-            if self.beam_search_flag
-            else torch.argmax(output, dim=-1)
+            self.beam_search(output,3,-2.8) if self.beam_search_flag else self.greedy_search_batch(output)
+            
         )
 
         sample = self.sample_translation(idx_tensor_en, prediction_idx, idx_tensor_fr)
 
         return sample, alignment
+
+
+    def greedy_search_batch(self, tensors, avoid_repetition=True):
+        batch_size, len_seq, vocab_size = tensors.size()
+        output = torch.zeros(batch_size, len_seq, dtype=torch.long)
+        softmaxed_ouput = F.softmax(tensors*1.2, dim=-1)
+
+        for b in range(batch_size):
+            tensor = tensors[b]
+            for i in range(len_seq):
+                if avoid_repetition:
+                    # pick an index with probability propotional to the softmaxed ouput 
+                    found = False
+                    while not found:
+                        idx = torch.multinomial(softmaxed_ouput[b,i], 1).item()
+                        repetition = False
+                        # check repetitions
+                        for length in range(i):
+                            concatenated = torch.cat(
+                                [
+                                    output[b, i - length :i],
+                                    torch.tensor([idx], dtype=torch.int64),
+                                ]
+                            )
+                            previous = output[
+                                b, i - 2 * length - 1 : i - length
+                            ]
+                            if len(previous) == len(concatenated):
+                                repetition = (concatenated == previous).all()
+                            if repetition:
+                                break
+                        if not repetition:
+                            output[b, i] = idx
+                            found = True 
+                            break
+                else:
+                    # Simply get the index of the maximum value in tensor[i]
+                    output[b, i] = torch.argmax(tensor[i])
+
+        return output
