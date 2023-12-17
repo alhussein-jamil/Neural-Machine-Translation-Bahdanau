@@ -3,7 +3,7 @@ Neural Machine Translation by Jointly Learning to Align and Translate paper impl
 https://arxiv.org/abs/1409.0473v7
 
 ## Installation
-Try installing using the install.bat other wise follow the general proceedure.
+Try installing using the install.bat other wise follow the general proceedure for conda, but same works for pyenv venv etc.
 
 ```
 conda create -n mlaproject python=3.10 -y
