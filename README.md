@@ -9,6 +9,9 @@ pip install --upgrade -r requirements.txt
 pip install -e ./src
 ``` 
 
+## Running the code 
+you can simply test the code using the dummy example provided in main.ipynb for training and testing
+
 
 ## Pulling from main branch
 ```

@@ -235,76 +235,83 @@ def load_data(
     tokenizer="Moses",
     vocab_source="train",
     mp = True,
+    only_vocab = False, 
 ):
     """
     Load and preprocess data for training and validation.
     """
+
+                
     print("Loading and preprocessing data...")
     mt_en = MosesTokenizer(lang="en") if tokenizer == "Moses" else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
     mt_fr = MosesTokenizer(lang="fr") if tokenizer == "Moses" else AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
 
-    # Load WMT14 dataset
-    wmt14 = load_dataset("wmt14", "fr-en", data_dir="data/")
 
-    # Accessing example data
-    train_data = wmt14["train"]
-    val_data = wmt14["validation"]
+    if not only_vocab: 
+        # Load WMT14 dataset
+        wmt14 = load_dataset("wmt14", "fr-en", data_dir="data/")
 
-    # shuffle data
-    train_data = train_data.shuffle(seed=42)
-    val_data = val_data.shuffle(seed=42)
+        # Accessing example data
+        train_data = wmt14["train"]
+        val_data = wmt14["validation"]
 
-    # Select a subset of data if specified
-    if train_len is not None:
-        train_data = train_data.select(range(train_len))
-    else:
-        train_len = len(train_data)
-    if val_len is not None:
-        val_data = val_data.select(range(val_len))
-    else:
-        val_len = len(val_data)
+        # shuffle data
+        train_data = train_data.shuffle(seed=42)
+        val_data = val_data.shuffle(seed=42)
 
-    tokenizer_wrapper = TokenizerWrapper(mt_en, mt_fr)
+        # Select a subset of data if specified
+        if train_len is not None:
+            train_data = train_data.select(range(train_len))
+        else:
+            train_len = len(train_data)
+        if val_len is not None:
+            val_data = val_data.select(range(val_len))
+        else:
+            val_len = len(val_data)
+
+        tokenizer_wrapper = TokenizerWrapper(mt_en, mt_fr)
 
 
-    # Tokenize and save train data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len)):
-        print("Tokenizing train data...")
-        tokenized_train_data = train_data.map(
-            tokenizer_wrapper.tokenize_function,
-            batched=False,
-            num_proc=n_processors,
-            remove_columns=["translation"],
-        )
-        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len))
+        # Tokenize and save train data if not already done
+        if not os.path.exists(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len)):
+            print("Tokenizing train data...")
+            tokenized_train_data = train_data.map(
+                tokenizer_wrapper.tokenize_function,
+                batched=False,
+                num_proc=n_processors,
+                remove_columns=["translation"],
+            )
+            tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len))
 
-    # Tokenize and save validation data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len)):
-        print("Tokenizing validation data...")
-        tokenized_val_data = val_data.map(
-            tokenizer_wrapper.tokenize_function,
-            batched=False,
-            num_proc=n_processors,
-            remove_columns=["translation"],
-        )
-        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len))
+        # Tokenize and save validation data if not already done
+        if not os.path.exists(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len)):
+            print("Tokenizing validation data...")
+            tokenized_val_data = val_data.map(
+                tokenizer_wrapper.tokenize_function,
+                batched=False,
+                num_proc=n_processors,
+                remove_columns=["translation"],
+            )
+            tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len))
 
-    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len))
-    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len))
+        tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/tokenized_train_data_{}".format(train_len))
+        tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/tokenized_val_data_{}".format(val_len))
 
-    if not os.path.exists(DATA_DIR / "processed_data/word_count_{}".format(train_len)):
-        print("Counting word frequency...")
-        word_count_train = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
-        word_count_val = tokenized_val_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
-        word_count = concatenate_datasets([word_count_train, word_count_val])
-        word_count.save_to_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
-    word_count = load_from_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
+        if not os.path.exists(DATA_DIR / "processed_data/word_count_{}".format(train_len)):
+            print("Counting word frequency...")
+            word_count_train = tokenized_train_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
+            word_count_val = tokenized_val_data.map(toWordCount(Counter), batched=False, num_proc=n_processors)
+            word_count = concatenate_datasets([word_count_train, word_count_val])
+            word_count.save_to_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
+        word_count = load_from_disk(DATA_DIR / "processed_data/word_count_{}".format(train_len))
 
     print("Extracting word frequency...")
     if os.path.exists(DATA_DIR / "dictionaries/") == False:
         os.mkdir(DATA_DIR / "dictionaries/")
     if vocab_source == "train":
         if not os.path.exists(DATA_DIR / "dictionaries/unigram_freq_en_{}.csv".format(train_len)):
+            if only_vocab :
+                raise ValueError("No vocabulary file found, please rerun with only_vocab = False to extract")
             df_en, df_fr = extract_word_frequency(word_count)
             df_en.to_csv(DATA_DIR / "dictionaries/unigram_freq_en_{}.csv".format(train_len), index=False)
             df_fr.to_csv(DATA_DIR / "dictionaries/unigram_freq_fr_{}.csv".format(train_len), index=False)
@@ -326,45 +333,54 @@ def load_data(
     tokenized_most_frequent_english_words.append("")
     tokenized_most_frequent_french_words.append("")
     
-    to_id_transform = toIdTransform(
-        tokenized_most_frequent_english_words,
-        tokenized_most_frequent_french_words,
-        torch.tensor,
-    )
+    if not only_vocab:
+        to_id_transform = toIdTransform(
+            tokenized_most_frequent_english_words,
+            tokenized_most_frequent_french_words,
+            torch.tensor,
+        )
 
-    # Convert tokenized sentences to word IDs and save train data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source)):
-        print("Converting train data to word IDs...")
-        tokenized_train_data = tokenized_train_data.map(to_id_transform, batched=False, num_proc=n_processors)
-        tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source))
+        # Convert tokenized sentences to word IDs and save train data if not already done
+        if not os.path.exists(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source)):
+            print("Converting train data to word IDs...")
+            tokenized_train_data = tokenized_train_data.map(to_id_transform, batched=False, num_proc=n_processors)
+            tokenized_train_data.save_to_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source))
 
-    # Convert tokenized sentences to word IDs and save validation data if not already done
-    if not os.path.exists(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source)):
-        print("Converting validation data to word IDs...")
-        tokenized_val_data = tokenized_val_data.map(to_id_transform, batched=False, num_proc=n_processors)
-        tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source))
+        # Convert tokenized sentences to word IDs and save validation data if not already done
+        if not os.path.exists(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source)):
+            print("Converting validation data to word IDs...")
+            tokenized_val_data = tokenized_val_data.map(to_id_transform, batched=False, num_proc=n_processors)
+            tokenized_val_data.save_to_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source))
 
-    tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source))
-    tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source))
+        tokenized_train_data = load_from_disk(DATA_DIR / "processed_data/id_train_data_{}_{}_{}_{}".format(train_len, kx, ky, vocab_source))
+        tokenized_val_data = load_from_disk(DATA_DIR / "processed_data/id_val_data_{}_{}_{}_{}".format(val_len, kx, ky, vocab_source))
 
-    # Initialize tensors for train and validation data
-    idx_train_tensor_en = torch.zeros((len(tokenized_train_data), Tx), dtype=torch.int16)
-    idx_train_tensor_fr = torch.zeros((len(tokenized_train_data), Ty), dtype=torch.int16)
-    idx_val_tensor_en = torch.zeros((len(tokenized_val_data), Tx), dtype=torch.int16)
-    idx_val_tensor_fr = torch.zeros((len(tokenized_val_data), Ty), dtype=torch.int16)
+        # Initialize tensors for train and validation data
+        idx_train_tensor_en = torch.zeros((len(tokenized_train_data), Tx), dtype=torch.int16)
+        idx_train_tensor_fr = torch.zeros((len(tokenized_train_data), Ty), dtype=torch.int16)
+        idx_val_tensor_en = torch.zeros((len(tokenized_val_data), Tx), dtype=torch.int16)
+        idx_val_tensor_fr = torch.zeros((len(tokenized_val_data), Ty), dtype=torch.int16)
 
 
 
-    #split the tensors according to the number of processors
-    pad_multiprocess(tokenized_train_data, idx_train_tensor_en, idx_train_tensor_fr, Tx, Ty, kx, ky, mp)
-    pad_multiprocess(tokenized_val_data, idx_val_tensor_en, idx_val_tensor_fr, Tx, Ty, kx, ky, mp)
+        #split the tensors according to the number of processors
+        pad_multiprocess(tokenized_train_data, idx_train_tensor_en, idx_train_tensor_fr, Tx, Ty, kx, ky, mp)
+        pad_multiprocess(tokenized_val_data, idx_val_tensor_en, idx_val_tensor_fr, Tx, Ty, kx, ky, mp)
 
-    # Extract English and French sentences for train and validation data
-    train_english_sentences = [train_data[i]["translation"]["en"] for i in range(len(train_data))]
-    train_french_sentences = [train_data[i]["translation"]["fr"] for i in range(len(train_data))]
-    val_english_sentences = [val_data[i]["translation"]["en"] for i in range(len(val_data))]
-    val_french_sentences = [val_data[i]["translation"]["fr"] for i in range(len(val_data))]
-
+        # Extract English and French sentences for train and validation data
+        train_english_sentences = [train_data[i]["translation"]["en"] for i in range(len(train_data))]
+        train_french_sentences = [train_data[i]["translation"]["fr"] for i in range(len(train_data))]
+        val_english_sentences = [val_data[i]["translation"]["en"] for i in range(len(val_data))]
+        val_french_sentences = [val_data[i]["translation"]["fr"] for i in range(len(val_data))]
+    else: 
+        idx_train_tensor_en = torch.zeros((1, Tx), dtype=torch.int16)
+        idx_train_tensor_fr = torch.zeros((1, Ty), dtype=torch.int16)
+        idx_val_tensor_en = torch.zeros((1, Tx), dtype=torch.int16)
+        idx_val_tensor_fr = torch.zeros((1, Ty), dtype=torch.int16)
+        train_english_sentences = []
+        train_french_sentences = []
+        val_english_sentences = []
+        val_french_sentences = []
     # Organize data into a dictionary
     data = dict(
         train=dict(

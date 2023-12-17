@@ -274,11 +274,11 @@ class AlignAndTranslate(nn.Module):
                 self.idx_to_word(p, self.french_vocab, language="fr")
             )
             # only keep the first len(tranlation_sentences[i]) tokens
-            # prediction_sentences[i] = " ".join(
-            #     prediction_sentences[i].split(" ")[
-            #         : len(translation_sentences[i].split(" "))
-            #     ]
-            # )
+            prediction_sentences[i] = " ".join(
+                prediction_sentences[i].split(" ")[
+                    : len(translation_sentences[i].split(" ")) + 3
+                ]
+            )
 
         return [source_sentences, prediction_sentences, translation_sentences]
 
@@ -363,7 +363,7 @@ class AlignAndTranslate(nn.Module):
 
         return output
 
-    def plot_attention(self, source, prediction, allignments, titles, val=True):
+    def plot_attention(self, source, prediction, allignments, titles, val=True, path=None):
         source_list = [s.split(" ") for s in source]
         prediction_list = [p.split(" ") for p in prediction]
         alls = []
@@ -375,7 +375,7 @@ class AlignAndTranslate(nn.Module):
             f"phrase {i}: bleu-score of {int(titles[i]*100.0)}%": (source_list[i], prediction_list[i], alls[i])
             for i in range(len(source_list))
         }
-        plot_alignment(data, save_path=self.plot_dir / (self.timestamp+"_{}".format("val" if val else "train")+ ".png"))
+        return plot_alignment(data, save_path=self.plot_dir / (self.timestamp+"_{}".format("val" if val else "train")+ ".png") if path is None else None)
 
     def eval(self, dataloader, max_len):
         #try sentences of length till Tx
@@ -413,7 +413,7 @@ class AlignAndTranslate(nn.Module):
         
         pad_multiprocess(treated_sentences, idx_tensor_en, idx_tensor_fr, self.Tx, self.Ty, len(self.english_vocab), len(self.french_vocab), False)
 
-        output, _ = self.forward(idx_tensor_en.to(self.device))
+        output, alignment = self.forward(idx_tensor_en.to(self.device))
     
         output[:, :, -2] = torch.min(
             output
@@ -426,4 +426,4 @@ class AlignAndTranslate(nn.Module):
 
         sample = self.sample_translation(idx_tensor_en, prediction_idx, idx_tensor_fr)
 
-        return sample[1]
+        return sample, alignment
