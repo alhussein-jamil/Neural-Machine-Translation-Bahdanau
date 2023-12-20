@@ -180,7 +180,7 @@ class Decoder(nn.Module):
         self.Ws = nn.Linear(rnn["hidden_size"], rnn["hidden_size"]).to(
             embedding["device"]
         )
-
+        
     def forward(self, h: torch.Tensor) -> torch.Tensor:
         """
         Forward pass of the Decoder module.

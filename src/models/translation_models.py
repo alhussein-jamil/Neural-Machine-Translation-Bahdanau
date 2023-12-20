@@ -30,8 +30,8 @@ class AlignAndTranslate(nn.Module):
         self.criterion = training_config.get("criterion", Loss(nn.NLLLoss()))
         self.optimizer = training_config.get(
             # "optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
-            # "optimizer",
-            torch.optim.Adam(self.parameters(), amsgrad=True)
+            "optimizer",
+            torch.optim.Adam(self.parameters(), amsgrad=True, lr = 1e-4)
         )
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
@@ -118,20 +118,24 @@ class AlignAndTranslate(nn.Module):
         except RuntimeError as e:
             print(f"Failed to load model from {path}: {str(e)}")
 
-    def load_last_model(self) -> None:
+    def load_last_model(self, best = False) -> None:
+        directory = self.best_models_dir if best else self.models_dir
         # Load last model
         try:
-            if not os.listdir(self.best_models_dir):
-                print(f"No model found in {self.best_models_dir}")
+            if not os.listdir(directory):
+                print(f"No model found in {directory}")
                 return
-            last_model = sorted(os.listdir(self.best_models_dir))[-1]
-            self.load_model(os.path.join(self.best_models_dir, last_model))
+            last_model = sorted(os.listdir(directory))[-1]
+            self.load_model(os.path.join(directory, last_model))
         except IndexError:
             print(f"No model found in {self.best_models_dir}")
 
-    def train(self, train_loader, val_loader) -> None:
+    def train(self, train_loader, val_loader, patience=3) -> None:
         train_file_exists = os.path.exists(self.output_dir / "train_losses.txt")
         val_file_exists = os.path.exists(self.output_dir / "val_losses.txt")
+        best_val_loss = float('inf')
+        epochs_without_improvement = 0
+
         # Training loop
         for epoch in range(math.ceil(self.epochs)):
             losses = []
@@ -188,9 +192,15 @@ class AlignAndTranslate(nn.Module):
                     )
                 )
 
-            if sum(val_losses) / len(val_losses) < self.best_val_loss:
-                self.best_val_loss = sum(val_losses) / len(val_losses)
+            if sum(val_losses) / len(val_losses) < best_val_loss:
+                best_val_loss = sum(val_losses) / len(val_losses)
                 self.save_model(best=True)
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+                if epochs_without_improvement >= patience:
+                    print(f"Early stopping: No improvement for {patience} epochs")
+                    break
 
     def display(
         self,
