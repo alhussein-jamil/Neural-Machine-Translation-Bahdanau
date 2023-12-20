@@ -91,13 +91,13 @@ class toIdTransform:
         """
         return {
             "ids_en": [
-                self.word_to_id_en.get(token, len(self.most_frequent_words_en) - 2)
+                self.word_to_id_en.get(token, len(self.most_frequent_words_en) - 1)
                 for token in tokenized["tokenized_en"]
-            ] + [len(self.most_frequent_words_en) - 1],
+            ],
             "ids_fr": [
-                self.word_to_id_fr.get(token, len(self.most_frequent_words_fr) - 2)
+                self.word_to_id_fr.get(token, len(self.most_frequent_words_fr) - 1)
                 for token in tokenized["tokenized_fr"]
-            ] + [len(self.most_frequent_words_fr) - 1],
+            ],
         }
 
 
@@ -397,12 +397,12 @@ def load_data(
     most_frequent_french_words = bow_french["word"].apply(lambda x: str(x)).tolist()
     tokenized_most_frequent_english_words = mt_en.tokenize(
         " ".join(most_frequent_english_words)
-    )[: kx - 2]
+    )[: kx - 1]
     tokenized_most_frequent_french_words = mt_fr.tokenize(
         " ".join(most_frequent_french_words)
-    )[: ky - 2]
-    tokenized_most_frequent_english_words += ["<UNK>", "<EOS>"]
-    tokenized_most_frequent_french_words += ["<UNK>", "<EOS>"]
+    )[: ky - 1]
+    tokenized_most_frequent_english_words.append("")
+    tokenized_most_frequent_french_words.append("")
 
     if not only_vocab:
         to_id_transform = toIdTransform(
