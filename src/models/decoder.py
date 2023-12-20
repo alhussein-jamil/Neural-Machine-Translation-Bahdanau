@@ -55,13 +55,10 @@ class Alignment(nn.Module):
         Returns:
             torch.Tensor: Alignment vector.
         """
-        # Find the alignment network response
-        a = self.nn_v(F.tanh(s_emb + h_emb))
-
-        return a
+        return self.nn_v(F.tanh(s_emb + h_emb)).float()
 
     def forward_unoptimized(self, s, h):
-        return self.forward(self, self.nn_s(s), self.nn_h(h))
+        return self.forward(self, self.nn_s(s), self.nn_h(h)).float()
 
 
 class OutputNetwork(nn.Module):
@@ -130,16 +127,13 @@ class OutputNetwork(nn.Module):
             torch.Tensor: The output tensor.
         """
         # based on the article Maxout Networks
-        t_tilde = self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i)
+        t_tilde =(self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i)).float()
 
         # sep odd and even
         t_even = t_tilde[:, 0::2]
         t_odd = t_tilde[:, 1::2]
 
-        # maxout
-        t = torch.max(t_even, t_odd)
-
-        return self.output_nn(t)
+        return self.output_nn(torch.max(t_even, t_odd))
 
 
 class Decoder(nn.Module):
@@ -200,9 +194,7 @@ class Decoder(nn.Module):
         # h = self.batch_norm_enc(h.reshape(-1, 2*self.hidden_size)).reshape(h.shape[0], -1, 2*self.hidden_size)
 
         # Initialize output tensor
-        output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size).to(
-            h.device
-        )
+        output = torch.zeros(h.size(0), h.size(1), self.output_nn.output_size, device=h.device,dtype=torch.float16)
 
         if not self.traditional:
             # Initialize context vector as a learnable parameter
@@ -210,9 +202,9 @@ class Decoder(nn.Module):
                 self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
                 h.size(0),
                 self.rnn.hidden_size,
-            )
+            ).float()
 
-            embed_y_i = torch.zeros(h.size(0), self.embedding.output_size).to(h.device)
+            embed_y_i = torch.zeros(h.size(0), self.embedding.output_size, device=h.device,dtype=torch.float16)
 
             h_emb = self.alignment.nn_h(h)
             allignments = []
@@ -226,7 +218,7 @@ class Decoder(nn.Module):
                 # Apply softmax to obtain attention weights
                 e = F.softmax(a, dim=1)
                 # Compute context vector
-                c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
+                c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2).float()
 
                 # Compute output and update context vector
                 raw_y_i, s_i = self.rnn(

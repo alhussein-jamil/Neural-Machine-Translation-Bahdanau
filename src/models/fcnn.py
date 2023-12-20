@@ -72,19 +72,19 @@ class FCNN(nn.Module):
         # Iterate through the fully-connected layers
         for i in range(len(self.fc) - 1):
             # Apply the linear transformation
-            x = self.fc[i](x)
+            x = self.fc[i](x).float()
 
             # Apply the activation function
-            x = self.activation(x)
+            x = self.activation(x).float()
 
             # Apply the dropout layer
-            x = self.dropout(x)
+            x = self.dropout(x).float()
 
         # Apply the final fully-connected layer
-        x = self.fc[-1](x)
-        x = self.last_layer_activation(x)
+        x = self.fc[-1](x).float()
+        x = self.last_layer_activation(x).float()
 
-        return x
+        return x.float()
 
     def init_weights(self, mean: float = 0, std: float = 0.01):
         for name, param in self.named_parameters():

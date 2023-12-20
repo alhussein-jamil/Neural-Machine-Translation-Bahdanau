@@ -31,7 +31,7 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         # Appliquer l'embedding
-        embedded = self.embedding(x.int())
+        embedded = self.embedding(x.int()).float()
         # Appeler la classe RNN pour obtenir output et hidden
         rnn_output, rnn_hidden = self.rnn(embedded)
-        return rnn_output, rnn_hidden
+        return rnn_output.float(), rnn_hidden.float()

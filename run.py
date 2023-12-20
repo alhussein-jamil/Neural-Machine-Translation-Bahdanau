@@ -10,6 +10,15 @@ from src.data_preprocessing import load_data
 parser = argparse.ArgumentParser()
 
 if __name__ == "__main__":
+
+    #disable all flags for debugging and make torch much faster
+    torch.backends.cudnn.enabled = False
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
+    
+
+
     # Parse command-line arguments
     parser.add_argument(
         "--train_len", type=int, default=100000, help="Number of training examples"
@@ -166,7 +175,7 @@ if __name__ == "__main__":
         french_vocab=french_vocab,
         epochs=config["epochs"],
         load_last_model=config["load_last_model"],
-        beam_search=True,
+        beam_search=False,
         Tx=config["Tx"],
         Ty=config["Ty"],
     )
