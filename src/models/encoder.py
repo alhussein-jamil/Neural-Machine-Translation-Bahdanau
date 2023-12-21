@@ -3,7 +3,8 @@ import torch.nn.functional as F
 
 from models.fcnn import FCNN
 from models.rnn import RNN
-
+from global_variables import DEVICE
+import torch
 
 class Encoder(nn.Module):
     def __init__(self, **kwargs):
@@ -29,9 +30,11 @@ class Encoder(nn.Module):
         )
         self.embedding = nn.Embedding(vocab_size, embedding_size)
 
+    @torch.autocast(DEVICE)
     def forward(self, x):
         # Appliquer l'embedding
-        embedded = self.embedding(x.int())
+        embedded = self.embedding(x.int()).half()
         # Appeler la classe RNN pour obtenir output et hidden
-        rnn_output, rnn_hidden = self.rnn(embedded)
-        return rnn_output, rnn_hidden
+        with torch.autocast(DEVICE):
+            rnn_output, rnn_hidden = self.rnn(embedded)
+        return rnn_output.half(), rnn_hidden.half()

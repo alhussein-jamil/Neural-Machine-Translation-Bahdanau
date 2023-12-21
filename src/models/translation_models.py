@@ -2,14 +2,14 @@ import datetime
 import math
 import os
 from typing import List
-
+from torch.cuda.amp import GradScaler
 import torch
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch import nn
 from torch.nn import functional as F
 
 from data_preprocessing import *
-from global_variables import DATA_DIR
+from global_variables import DATA_DIR, DEVICE
 from metrics import bleu_seq
 from metrics.losses import Loss
 from models.decoder import Decoder
@@ -46,6 +46,7 @@ class AlignAndTranslate(nn.Module):
         self.start_time = self.timestamp
         self.Tx = training_config["Tx"]
         self.Ty = training_config["Ty"]
+        self.scaler = GradScaler()
 
         self.train_losses = []
         self.val_losses = [1e10]
@@ -65,6 +66,7 @@ class AlignAndTranslate(nn.Module):
         if self.load_last_checkpoints:
             self.load_last_model()
 
+    @torch.autocast(DEVICE)
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Forward pass through encoder and decoder
         encoder_output, _ = self.encoder(x)
@@ -73,16 +75,6 @@ class AlignAndTranslate(nn.Module):
 
     def calc_loss(self, output: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         loss = self.criterion(output, y)
-
-        L2_reg = torch.tensor(0.0).to(self.device)
-
-        for param in self.parameters():
-            L2_reg += torch.norm(param)
-
-        L2_reg *= 3e-5
-
-        loss += L2_reg
-
         return loss
 
     def train_step(self, x: torch.Tensor, y: torch.Tensor) -> float:
@@ -93,12 +85,14 @@ class AlignAndTranslate(nn.Module):
 
         loss = self.calc_loss(output, y.to(self.device))
 
-        loss.backward()
+        self.scaler.scale(loss).backward()  
 
-        # Gradient Value Clipping
+        # # Gradient Value Clipping
+        self.scaler.unscale_(self.optimizer)
         nn.utils.clip_grad_norm_(self.parameters(), 1.0)
 
-        self.optimizer.step()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
 
         return loss.item(), output, allignments
 
@@ -189,7 +183,7 @@ class AlignAndTranslate(nn.Module):
                     "{} {} {}\n".format(
                         self.train_losses[-1],
                         self.val_losses[-1],
-                        torch.mean(self.bleu_scores[-1]).float(),
+                        torch.mean(self.bleu_scores[-1]).half(),
                     )
                 )
 
@@ -207,13 +201,13 @@ class AlignAndTranslate(nn.Module):
     ):
         random_idx = torch.randint(0, len(x), (4,))
         prediction = output[random_idx]
-        prediction[:, :, -2] = torch.min(
+        prediction[:, :, -3] = torch.min(
             prediction
         )  # set the <unk> token to the minimum value so that it is not selected
         prediction_idx = (
             self.beam_search(prediction, 5)
             if self.beam_search_flag
-            else torch.argmax(prediction, dim=-1)
+            else self.greedy_search_batch(prediction)
         )
 
         sample = self.sample_translation(x[random_idx], prediction_idx, y[random_idx])
@@ -280,7 +274,7 @@ class AlignAndTranslate(nn.Module):
     def idx_to_word(self, idx: torch.Tensor, vocab: List, language="fr") -> str:
         # Convert index to word
         idx = idx.cpu().detach().numpy()
-        tokens = list(vocab[idx[(idx < len(vocab))]])
+        tokens = list(vocab[idx[(idx < len(vocab) - 1)]])
         detokenizer = MosesDetokenizer(lang=language)
         phrase = detokenizer.detokenize(tokens, return_str=True)
         phrase = phrase.replace("  ", " ")

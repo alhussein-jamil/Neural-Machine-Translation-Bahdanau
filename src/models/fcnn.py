@@ -3,7 +3,7 @@ from typing import List
 import torch
 from torch import nn
 from torch.nn import init
-
+from global_variables import DEVICE
 
 class FCNN(nn.Module):
     def __init__(
@@ -59,6 +59,7 @@ class FCNN(nn.Module):
         # Initialize the weights
         self.init_weights(mean, std)
 
+    @torch.autocast(DEVICE)
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Forward pass of the FCNN.
@@ -72,19 +73,19 @@ class FCNN(nn.Module):
         # Iterate through the fully-connected layers
         for i in range(len(self.fc) - 1):
             # Apply the linear transformation
-            x = self.fc[i](x)
+            x = self.fc[i](x).half()
 
             # Apply the activation function
-            x = self.activation(x)
+            x = self.activation(x).half()
 
             # Apply the dropout layer
-            x = self.dropout(x)
+            x = self.dropout(x).half()
 
         # Apply the final fully-connected layer
-        x = self.fc[-1](x)
-        x = self.last_layer_activation(x)
+        x = self.fc[-1](x).half()
+        x = self.last_layer_activation(x).half()
 
-        return x
+        return x.half()
 
     def init_weights(self, mean: float = 0, std: float = 0.01):
         for name, param in self.named_parameters():

@@ -1,10 +1,13 @@
 import argparse
-
+import torch
 import torch
 import yaml
 
 from models.translation_models import AlignAndTranslate
 from src.data_preprocessing import load_data
+
+
+torch.backends.cudnn.benchmark = True
 
 # Define command-line arguments
 parser = argparse.ArgumentParser()
