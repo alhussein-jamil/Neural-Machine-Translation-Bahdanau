@@ -4,6 +4,7 @@ from torch import nn
 from torch.nn import init
 from global_variables import DEVICE
 
+
 class RNN(nn.Module):
     """
     Recurrent Neural Network (RNN) Module.
@@ -33,7 +34,6 @@ class RNN(nn.Module):
         hidden_size,
         num_layers,
         device,
-        activation: nn.Module = nn.Tanh(),
         dropout=0,
         bidirectional=False,
         type="RNN",
@@ -62,7 +62,6 @@ class RNN(nn.Module):
             input_size,
             hidden_size,
             num_layers,
-            # nonlinearity="tanh" if activation is isinstance(activation, nn.Tanh) else "relu",
             batch_first=True,
             dropout=dropout,
             bidirectional=bidirectional,
@@ -70,7 +69,6 @@ class RNN(nn.Module):
         # Initialize weights
         self.init_weights()
 
-        
     @torch.autocast(DEVICE)
     def forward(self, x, h0=None):
         """
@@ -88,8 +86,8 @@ class RNN(nn.Module):
                 self.num_layers * (2 if self.rnn.bidirectional else 1),
                 x.size(0),
                 self.hidden_size,
-                device = self.device,
-                dtype=torch.float16
+                device=self.device,
+                dtype=torch.float16,
             )
         c0 = None
         if isinstance(self.rnn, nn.LSTM):
@@ -97,8 +95,8 @@ class RNN(nn.Module):
                 self.num_layers * (2 if self.rnn.bidirectional else 1),
                 x.size(0),
                 self.hidden_size,
-                device = self.device,
-                dtype=torch.float16
+                device=self.device,
+                dtype=torch.float16,
             )
             out, (hidden, _) = self.rnn(x, (h0, c0))
         # Forward propagate RNN

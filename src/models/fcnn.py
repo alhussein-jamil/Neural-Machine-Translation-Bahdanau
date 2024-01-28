@@ -5,6 +5,7 @@ from torch import nn
 from torch.nn import init
 from global_variables import DEVICE
 
+
 class FCNN(nn.Module):
     def __init__(
         self,
@@ -37,6 +38,7 @@ class FCNN(nn.Module):
                 self.hidden_sizes[0]
                 if len(self.hidden_sizes) > 0
                 else self.output_size,
+                bias=bias,
             )
         )
 
@@ -90,6 +92,10 @@ class FCNN(nn.Module):
     def init_weights(self, mean: float = 0, std: float = 0.01):
         for name, param in self.named_parameters():
             if "weight" in name:
-                init.normal_(param.data, mean=mean, std=std)
+                if std == 0.0:
+                    init.constant_(param.data, mean)
+                else:
+                    #init.xavier_normal_(param.data)
+                    init.normal_(param.data, mean=mean, std=std)
             elif "bias" in name:
                 init.constant_(param.data, 0)

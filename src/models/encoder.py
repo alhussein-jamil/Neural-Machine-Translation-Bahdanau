@@ -1,10 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.fcnn import FCNN
 from models.rnn import RNN
 from global_variables import DEVICE
 import torch
+from models.fcnn import FCNN
 
 class Encoder(nn.Module):
     def __init__(self, **kwargs):
@@ -23,17 +23,22 @@ class Encoder(nn.Module):
             hidden_size=rnn_hidden_size,
             num_layers=rnn_num_layers,
             device=rnn_device,
-            activation=nn.Tanh(),
             dropout=dropout,
             bidirectional=True,
             type=rnn_type,
         )
-        self.embedding = nn.Embedding(vocab_size, embedding_size)
+        self.embedding = FCNN(
+            input_size=vocab_size,
+            output_size=embedding_size,
+            device=rnn_device,
+            dropout=dropout
+        )
 
     @torch.autocast(DEVICE)
     def forward(self, x):
+        x = torch.nn.functional.one_hot(x.long(), self.vocab_size)
         # Appliquer l'embedding
-        embedded = self.embedding(x.int()).half()
+        embedded = self.embedding(x.float())
         # Appeler la classe RNN pour obtenir output et hidden
         with torch.autocast(DEVICE):
             rnn_output, rnn_hidden = self.rnn(embedded)

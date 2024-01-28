@@ -124,7 +124,6 @@ if __name__ == "__main__":
 
     alignment_cfg = dict(
         input_size=config["hidden_size"] * 3,
-        output_size=config["Tx"],
         device=device,
         dropout=0.0,
     )
@@ -133,13 +132,14 @@ if __name__ == "__main__":
         embedding_size=config["embedding_size"],
         max_out_units=config["max_out_units"],
         hidden_size=config["hidden_size"],
-        vocab_size=len(french_vocab) + 1,
+        vocab_size=len(french_vocab) + 2,
         device=device,
         dropout=0.0,
     )
 
     decoder_embedding_cfg = dict(
         embedding_size=config["embedding_size"],
+        vocab_size=len(french_vocab) + 2,
         device=device,
     )
 
@@ -148,6 +148,7 @@ if __name__ == "__main__":
         rnn=config_rnn_decoder,
         output_nn=output_nn_cfg,
         embedding=decoder_embedding_cfg,
+        Ty=config["Ty"],
         traditional=config["encoder_decoder"],
     )
 
@@ -156,7 +157,7 @@ if __name__ == "__main__":
         rnn_hidden_size=config["hidden_size"],
         rnn_num_layers=1,
         rnn_device=device,
-        vocab_size=len(english_vocab) + 1,
+        vocab_size=len(english_vocab) + 2,
         rnn_type="GRU",
         embedding_size=config["embedding_size"],
     )
@@ -164,12 +165,12 @@ if __name__ == "__main__":
     # Define training configuration
     training_cfg = dict(
         device=device,
-        output_vocab_size=len(french_vocab) + 1,
+        output_vocab_size=len(french_vocab) + 2,
         english_vocab=english_vocab,
         french_vocab=french_vocab,
         epochs=config["epochs"],
         load_last_model=config["load_last_model"],
-        beam_search=True,
+        beam_search=False,
         Tx=config["Tx"],
         Ty=config["Ty"],
     )
@@ -193,8 +194,15 @@ if __name__ == "__main__":
     for en, fr in zip(english_phrases, french_translation):
         to_translate.append(dict(translation=dict(en=en, fr=fr)))
 
-    translations = model.translate_sentence(to_translate)
-
+    sample, alignment = model.translate_sentence(to_translate)
+    translations = ""
+    # breakpoint()
+    # for s in range(4):
+    #     translations += f"\tSource: {sample[0][s]}\n"
+    #     translations += f"\tPrediction: {sample[1][s]}\n"
+    #     translations += f"\tTranslation: {sample[2][s]}\n"
+    #     translations += "\n"
+    print(translations)
     # Train the model
     if args.test:
         evaluation = model.eval(val_dataloader, max_len=args.Ty)
