@@ -170,7 +170,7 @@ if __name__ == "__main__":
         french_vocab=french_vocab,
         epochs=config["epochs"],
         load_last_model=config["load_last_model"],
-        beam_search=False,
+        beam_search=True,
         Tx=config["Tx"],
         Ty=config["Ty"],
     )
@@ -195,19 +195,16 @@ if __name__ == "__main__":
         to_translate.append(dict(translation=dict(en=en, fr=fr)))
 
     sample, alignment = model.translate_sentence(to_translate)
-    translations = ""
-    # breakpoint()
-    # for s in range(4):
-    #     translations += f"\tSource: {sample[0][s]}\n"
-    #     translations += f"\tPrediction: {sample[1][s]}\n"
-    #     translations += f"\tTranslation: {sample[2][s]}\n"
-    #     translations += "\n"
-    print(translations)
+    for i, s in enumerate(sample):
+        print(f"Sample {i+1}")
+        en = s[0]
+        fr = s[1]
+        print(f"\tEnglish: {en}")
+        print(f"\tFrench: {fr}")
+
     # Train the model
     if args.test:
         evaluation = model.eval(val_dataloader, max_len=args.Ty)
         breakpoint()
     else:
         model.train(train_loader=train_dataloader, val_loader=val_dataloader)
-
-    breakpoint()

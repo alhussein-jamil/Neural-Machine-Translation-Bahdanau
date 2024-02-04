@@ -56,11 +56,9 @@ class Alignment(nn.Module):
         Returns:
             torch.Tensor: Alignment vector.
         """
-
         return (
             self.va(F.tanh(s_emb + h_emb).view(-1, self.hidden_size))
             .view(h_emb.shape[0], -1)
-            .half()
         )
 
 
@@ -131,13 +129,13 @@ class OutputNetwork(nn.Module):
             torch.Tensor: The output tensor.
         """
         # based on the article Maxout Networks
-        t_tilde = (self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i)).half()
+        t_tilde = (self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i))
 
         # sep odd and even
         t_even = t_tilde[:, 0::2]
         t_odd = t_tilde[:, 1::2]
 
-        return self.output_nn(torch.max(t_even, t_odd)).half()
+        return self.output_nn(torch.max(t_even, t_odd))
 
 
 class Decoder(nn.Module):
@@ -151,7 +149,6 @@ class Decoder(nn.Module):
         Ty: int = 10,
     ) -> None:
         super().__init__()
-
         # specify if we use the traditional encoder-decoder model
         self.traditional = traditional
 
@@ -171,6 +168,7 @@ class Decoder(nn.Module):
             input_size=embedding["vocab_size"],
             output_size=embedding["embedding_size"],
             device=embedding["device"],
+
         )
         # self.batch_norm_enc = nn.BatchNorm1d(2*rnn["hidden_size"])
         self.output_nn = OutputNetwork(**output_nn)
@@ -195,9 +193,11 @@ class Decoder(nn.Module):
         Forward pass of the Decoder module.
 
         Args:
-            h (torch.Tensor): Tensor representing the hidden states from the encoder.
-            s_i (torch.Tensor): Tensor representing the context from the decoder.
-            y_i (torch.Tensor): Tensor representing the output from the decoder.
+            t (int): The current time step.
+            h (torch.Tensor): The hidden states from the encoder.
+            h_emb (torch.Tensor): The embeddings of the hidden states from the encoder.
+            s_i (torch.Tensor): The context from the decoder.
+            y_i (torch.Tensor): The current output token.
 
         Returns:
             torch.Tensor: Output tensor.
@@ -205,8 +205,6 @@ class Decoder(nn.Module):
             torch.Tensor: Alignment vector.
             
         """
-        # h = self.batch_norm_enc(h.reshape(-1, 2*self.hidden_size)).reshape(h.shape[0], -1, 2*self.hidden_size)
-
         if not self.traditional:
             if h_emb is None:
                 raise ValueError("h_emb must be specified for attention model")
@@ -219,36 +217,41 @@ class Decoder(nn.Module):
                         h.size(0),
                         self.rnn.hidden_size,
                     )
-                    .half()
                 )
             if y_i is None:
                 y_i = torch.zeros(
                     h.size(0),
-                    self.embedding.output_size,
+                    self.relaxation_nn.output_size,
                     device=h.device,
                     dtype=torch.float16,
                 )
-            embed_y_i = self.embedding(y_i).half()
-
+                y_i[:, -2] = 1
+            embed_y_i = self.embedding(y_i)
+            
             # Compute the embedding of the current context vector
-            s_i_emb = self.alignment.nn_s(s_i.view(h.size(0), -1))
+            s_i_emb = self.alignment.nn_s(s_i.view(h.size(0), -1)).half()
 
             # Compute alignment vector
             a = self.alignment(s_i_emb.unsqueeze(1).repeat((1,h.size(1),1)),
                                 h_emb)
 
+        
 
             # Apply softmax to obtain attention weights
-            e = F.softmax(a, dim=1)
+            e = F.softmax(a.float(), dim=1)
 
+            
 
             # Compute context vector
-            c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2).half()
-
+            c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
+            
             # Compute output and update context vector
             _, s_i = self.rnn(
-                torch.cat((embed_y_i.unsqueeze(1), c.unsqueeze(1)), dim=2), s_i
+                torch.cat((embed_y_i.unsqueeze(1).float(),
+                            c.unsqueeze(1).float()), dim=2),
+                              s_i
             )
+            
 
 
             # Embed the output token and compute the output of the output network
@@ -256,6 +259,7 @@ class Decoder(nn.Module):
                 s_i.view(h.size(0), -1), embed_y_i.squeeze(1), c
             )
 
+           
             # Store the output in the output tensor
             return y_i, s_i, e
         else:

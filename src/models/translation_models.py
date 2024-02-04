@@ -9,7 +9,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from data_preprocessing import *
-from global_variables import DATA_DIR, DEVICE
+from global_variables import *
 from metrics import bleu_seq
 from metrics.losses import Loss
 from models.decoder import Decoder
@@ -29,10 +29,8 @@ class AlignAndTranslate(nn.Module):
         training_config = kwargs.get("training", {})
         self.criterion = training_config.get("criterion", Loss(nn.NLLLoss()))
         self.optimizer = training_config.get(
-            #"optimizer", torch.optim.Adadelta(self.parameters(), eps=1e-6, rho = 0.95)
-            "optimizer",
-            torch.optim.Adam(self.parameters(), amsgrad=True, lr=1e-5),
-        )
+        "optimizer", torch.optim.Adam(self.parameters(), amsgrad=True,lr = 0.001)
+        ) # We omit the usage of Adadelt as it's a variant of Adam
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
         self.print_every = training_config.get("print_every", 100)
@@ -85,13 +83,13 @@ class AlignAndTranslate(nn.Module):
         # Forward pass through encoder and decoder
         encoder_output, _ = self.encoder(x)
         h_emb = self.decoder.alignment.nn_h(encoder_output)
-        s_i = None
-        #initialize y_i to be the <sos> token
-        y_i = torch.zeros((x.shape[0], self.decoder.output_nn.output_size), device=self.device)
-        y_i[:, -2] = 1.0
+        s_i = None # the initialization is directly handled in the decoder
+        y_i= None # the initialization is directly handled in the decoder
         allignments = []
         decoder_output = torch.zeros((x.shape[0], self.Ty, self.decoder.relaxation_nn.output_size), device=self.device)
         for t in range(self.Ty):
+            if y_i is not None:
+                y_i = F.softmax(y_i, dim=-1)
             y_i, s_i, a_i = self.decoder(t,encoder_output, h_emb, s_i, y_i)
 
             allignments.append(a_i) 
@@ -144,7 +142,7 @@ class AlignAndTranslate(nn.Module):
         # Load last model
         try:
             dir = self.best_models_dir
-            if False and not os.listdir(self.best_models_dir):
+            if not os.listdir(self.best_models_dir):
                 print(f"No model found in {self.best_models_dir}")
                 if not os.listdir(self.models_dir):
                     print(f"No model found in {self.models_dir}")
@@ -180,6 +178,11 @@ class AlignAndTranslate(nn.Module):
 
                 if i % self.print_every == 0:
                     print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}, Mean Loss: {sum(losses) / len(losses)}")
+                    # plot a sample 
+                    if i % (self.print_every * 10) == 0:
+                        self.display(output, allignments, x, y, val=False)
+                    # stylish_stat_print(STATS)
+                    # stylish_stat_print(WEIGHTS_STATS)
                     # add losses to a text file
                 if i % self.save_every == 0:
                     self.save_model()
@@ -266,6 +269,7 @@ class AlignAndTranslate(nn.Module):
         for i, val_sample in enumerate(val_loader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output, allignments = self.forward(x.to(self.device))
+
             loss = self.calc_loss(output, y.to(self.device))
             total_loss += loss.item()
             if i == 0:
@@ -299,6 +303,7 @@ class AlignAndTranslate(nn.Module):
     def idx_to_word(self, idx: torch.Tensor, vocab: List, language="fr") -> str:
         # Convert index to word
         idx = idx.cpu().detach().int().numpy()
+        
         tokens = list(vocab[idx[(idx < len(vocab) - 1)]])
         detokenizer = MosesDetokenizer(lang=language)
         phrase = detokenizer.detokenize(tokens, return_str=True)
@@ -307,46 +312,40 @@ class AlignAndTranslate(nn.Module):
     
     def beam_search_decoder(self, x: torch.Tensor, beam_size: int = 10) -> torch.Tensor:
         with torch.no_grad():
-            # Forward pass through encoder
             encoder_output, _ = self.encoder(x.to(self.device))
             h_emb = self.decoder.alignment.nn_h(encoder_output)
 
-            batch_size = x.shape[0]
+            batch_size, vocab_size = x.shape[0], len(self.target_vocab) + 2
+            sos_token, unk_token, pad_token = vocab_size - 2, vocab_size - 3, vocab_size - 1
 
-            # Initialize the beam search output tensor and alignment tensor
             output = torch.zeros(batch_size, self.Ty, device=self.device)
             alignments = torch.zeros(batch_size, self.Ty, self.Ty, device=self.device)
-            vocab_size = len(self.target_vocab) + 2
+
             for b in range(batch_size):
-                first_candidate_seq = torch.full(size = (self.Ty,) ,fill_value = vocab_size-3, device=self.device).long() # Initialize the first candidate sequence to be unknown
-                first_candidate_seq[0] = vocab_size-2 # Set the first word to be the <sos> token
-                # Initialize the beam search candidates
-                candidates = [(first_candidate_seq, 0.0, None, [])]  # Include alignment in the candidates
+                first_candidate_seq = torch.full((self.Ty,), unk_token, device=self.device, dtype=torch.long)
+                first_candidate_seq[0] = sos_token
+                candidates = [(first_candidate_seq, 0.0, None, [])]
 
                 for t in range(self.Ty):
                     new_candidates = []
-                    for seq, score, s_i, align in candidates:  # Unpack alignment from the candidates
+                    for seq, score, s_i, align in candidates:
+                        if seq[t] == pad_token:
+                            new_candidates.append((seq, score, s_i, align))
+                            continue
 
-                        # Forward pass through decoder
-                        y_i, s_i, a_i = self.decoder(t, encoder_output[b:b+1], h_emb[b:b+1], s_i, torch.nn.functional.one_hot(seq[t:t+1], num_classes=vocab_size).float())
-                        y_i = y_i.cpu().detach().float()
-
-                        y_i[:, -3] = torch.min(y_i)  # set the <unk> token to the minimum value so that it is not selected
-
-                        # Calculate the cumulative scores for all words in the candidate sequence
+                        y_i, s_i, a_i = self.decoder(t, encoder_output[b:b+1], h_emb[b:b+1],
+                                                    s_i, torch.nn.functional.one_hot(seq[t:t+1], num_classes=vocab_size).float())
                         scores = F.log_softmax(y_i, dim=-1)
                         cumulative_scores = score + scores.squeeze()
 
-                        # Find the top-k candidates based on the cumulative scores
                         top_k_scores, top_k_indices = torch.topk(cumulative_scores, beam_size)
 
                         for i in range(beam_size):
                             new_seq = seq.clone()
-
-                            # avoid repitition
-                            repition = False
+                            # avoid repetition
+                            repetition = False
                             temp_seq = new_seq.clone()[:t]
-                            # check repitions
+                            # check repetitions
                             for length in range(t):
                                 concatenated = torch.cat(
                                     [
@@ -358,176 +357,24 @@ class AlignAndTranslate(nn.Module):
                                     len(temp_seq) - 2 * length - 1 : len(temp_seq) - length
                                 ]
                                 if len(previous) == len(concatenated):
-                                    repition = (concatenated == previous).all()
-                                if repition:
+                                    repetition = (concatenated == previous).all()
+                                if repetition:
                                     break
+                            if not repetition:
+                                new_seq[t] = top_k_indices[i]
+                                new_score = top_k_scores[i]
+                                new_align = align + [a_i]
+                                new_candidates.append((new_seq, new_score, s_i, new_align))
 
-                            if repition:
-                                continue
-                            new_seq[t] = top_k_indices[i]
-                            new_score = top_k_scores[i]
-                            new_align = align + [a_i]  # Append the new alignment to the list
-                            new_candidates.append((new_seq, new_score, s_i, new_align))  # Include alignment in the new candidates
-
-                    # Select the top-k candidates from all expanded candidates
                     candidates = sorted(new_candidates, key=lambda x: x[1], reverse=True)[:beam_size]
 
-                # Select the sequence with the highest score
                 best_seq, _, _, best_align = max(candidates, key=lambda x: x[1])
-
-                # Store the best sequence in the output tensor
                 output[b] = best_seq
                 alignments[b] = torch.stack(best_align, dim=0).squeeze()
 
         return output, alignments
-    # def beam_search_decoder(self, src_sequence, beam_width=2):
-    #     max_length = self.Ty
-    #     with torch.no_grad():
-    #         # Encode the source sequence
-    #         encoder_output, _ = self.encoder(src_sequence.to(self.device))
 
-    #         h_emb = self.decoder.alignment.nn_h(encoder_output)
-            
-    #         # Initialize the beam search
-    #         beam = {
-    #             'sequences': torch.zeros((src_sequence.shape[0],max_length, beam_width, 1+len(self.target_vocab)), device=self.device),
-    #             'scores': torch.zeros((src_sequence.shape[0],max_length, beam_width), device=self.device),
-    #             'hidden': torch.zeros((src_sequence.shape[0],max_length, beam_width, self.decoder.rnn.hidden_size), device=self.device),
-    #             'alignments': torch.zeros((src_sequence.shape[0],max_length, beam_width, self.Tx), device=self.device)
-    #         }
-
-    #         # Loop over the time steps
-    #         for t in range(max_length):
-    #             # Initialize the list of candidates
-
-    #             candidates_scores = torch.zeros((src_sequence.shape[0], beam_width* beam_width), device=self.device)
-    #             candidates_indices = torch.zeros((src_sequence.shape[0], beam_width* beam_width), device=self.device)
-    #             candidates_hidden = torch.zeros((src_sequence.shape[0], beam_width* beam_width, self.decoder.rnn.hidden_size), device=self.device)
-    #             candidates_alignments = torch.zeros((src_sequence.shape[0], beam_width* beam_width, self.Tx), device=self.device)
-    #             # Loop over the sequences in the beam
-    #             for b in range(beam_width):
-    #                 # Get the last word in the sequence
-    #                 last_word = beam['sequences'][:,t,b,:]
-    #                 last_hidden = beam['hidden'][:,t-1,b,:] if t > 0 else None
-
-    #                 y_i, s_i, a_i = self.decoder(t,encoder_output, h_emb, last_hidden, last_word)
-
-    #                 # Calculate the cumulative scores for all words in the vocabulary
-    #                 cumulative_scores = beam['scores'][:,t,b].unsqueeze(-1) + F.log_softmax(y_i, dim=-1)
-
-    #                 # Find the top-k candidates based on the cumulative scores
-    #                 top_k_scores, top_k_indices = torch.topk(cumulative_scores, beam_width)
-
-    #                 # Add the top-k candidates to the list
-    #                 for k in range(beam_width):
-    #                     candidates_scores[:,b*k] = top_k_scores[:,k]
-    #                     candidates_indices[:,b*k] = top_k_indices[:,k]
-    #                     candidates_hidden[:,b*k,:] = s_i
-    #                     candidates_alignments[:,b*k,:] = a_i
-
-    #             # Select the top-k candidates
-    #             candidates_sorted_args= torch.argsort(candidates_scores, dim=-1, descending=True)
-    #             breakpoint()
-
-    #             for i in range(src_sequence.shape[0]):
-    #                 #only keep the top beam_width candidates
-    #                 candidates_scores[i] = candidates_scores[i,candidates_sorted_args[i,:beam_width]]
-    #                 candidates_indices[i]  = candidates_indices[i,candidates_sorted_args[i,:beam_width]]
-    #                 candidates_hidden[i]  = candidates_hidden[i,candidates_sorted_args[i,:beam_width]]
-    #                 candidates_alignments[i]  = candidates_alignments[i,candidates_sorted_args[i,:beam_width]]
-    #             breakpoint()
-
-    #             # Update the beam
-    #             beam['sequences'][:,t,:,:] = torch.cat([beam['sequences'][:,t,:,:].gather(2, candidates_indices.unsqueeze(-1).unsqueeze(-1).expand(-1,-1,-1,1)), candidates_indices.unsqueeze(-1).unsqueeze(-1).expand(-1,-1,-1,1)], dim=-1)
-    #             beam['scores'][:,t,:] = candidates_scores
-    #             beam['hidden'][:,t,:,:] = candidates_hidden
-    #             beam['alignments'][:,t,:,:] = candidates_alignments
-    #             breakpoint()
-                    
-            
-    # def beam_search(self, tensor, beam_size, threshold=-2.8):
-    #     batch_size, len_seq, _ = tensor.size()
-    #     device = tensor.device
-
-    #     # Initialize the beam search output tensor
-    #     output = torch.zeros(batch_size, len_seq, dtype=torch.long, device=device)
-
-    #     # Loop over each sequence in the batch
-    #     for b in range(batch_size):
-    #         # Initialize the beam search candidates
-    #         candidates = [(torch.tensor([], dtype=torch.long, device=device), 0)]
-
-    #         # Loop over each time step in the sequence
-    #         for t in range(len_seq):
-    #             # Get the scores for the next time step
-    #             scores = F.log_softmax(tensor[b, t], dim=-1)
-
-    #             # Generate new candidates by expanding the existing ones
-    #             new_candidates = []
-    #             for seq, score in candidates:
-    #                 # Calculate the cumulative scores for all words in the candidate sequence
-    #                 cumulative_scores = score + scores
-
-    #                 # Find the top-k candidates based on the cumulative scores
-    #                 top_k_indices = torch.topk(cumulative_scores, beam_size).indices
-    #                 for i in top_k_indices:
-    #                     # avoid repitition
-    #                     repition = False
-    #                     # check repitions
-    #                     for length in range(len(seq)):
-    #                         concatenated = torch.cat(
-    #                             [
-    #                                 seq[len(seq) - length :],
-    #                                 torch.tensor([i], dtype=torch.int64, device=device),
-    #                             ]
-    #                         )
-    #                         previous = seq[
-    #                             len(seq) - 2 * length - 1 : len(seq) - length
-    #                         ]
-    #                         if len(previous) == len(concatenated):
-    #                             repition = (concatenated == previous).all()
-    #                         if repition:
-    #                             break
-
-    #                     if repition:
-    #                         continue
-    #                     if scores[i] < threshold:
-    #                         # add padding
-    #                         new_seq = torch.cat(
-    #                             [
-    #                                 seq,
-    #                                 torch.tensor(
-    #                                     [len(self.target_vocab)],
-    #                                     dtype=torch.long,
-    #                                     device=device,
-    #                                 ),
-    #                             ]
-    #                         )
-    #                     else:
-    #                         new_seq = torch.cat(
-    #                             [
-    #                                 seq,
-    #                                 torch.tensor([i], dtype=torch.long, device=device),
-    #                             ]
-    #                         )
-    #                     new_score = cumulative_scores[i]
-    #                     new_candidates.append((new_seq, new_score))
-
-    #                 # Select the top-k candidates from all expanded candidates
-    #                 new_candidates = sorted(
-    #                     new_candidates, key=lambda x: x[1], reverse=True
-    #                 )[:beam_size]
-
-    #             # Update the candidates for the next time step
-    #             candidates = new_candidates
-
-    #         # Select the sequence with the highest score
-    #         best_seq, _ = max(candidates, key=lambda x: x[1])
-
-    #         # Store the best sequence in the output tensor
-    #         output[b] = best_seq
-
-    #     return output
+    
 
     def plot_attention(
         self, source, prediction, allignments, titles, val=True, path=None
@@ -560,7 +407,7 @@ class AlignAndTranslate(nn.Module):
         bleu_scores = torch.zeros(max_len, len(dataloader))
         original_sentences = []
         predicted_sentences = []
-        for i, val_sample in enumerate(dataloader):
+        for _, val_sample in enumerate(dataloader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output, _ = self.forward(x.to(self.device))
             prediction_idx = torch.argmax(output, dim=-1)

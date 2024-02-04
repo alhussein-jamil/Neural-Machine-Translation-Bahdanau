@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
 from torch.nn import init
 from global_variables import DEVICE
@@ -110,5 +109,5 @@ class RNN(nn.Module):
                     init.orthogonal_(param.data)
                 else:
                     init.normal_(param.data, mean=0, std=0.01)
-            else:
+            if "bias" in name:
                 init.constant_(param.data, val=0)

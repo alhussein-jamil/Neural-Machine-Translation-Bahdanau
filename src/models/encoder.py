@@ -31,15 +31,15 @@ class Encoder(nn.Module):
             input_size=vocab_size,
             output_size=embedding_size,
             device=rnn_device,
-            dropout=dropout
+            dropout=dropout,
         )
 
     @torch.autocast(DEVICE)
     def forward(self, x):
-        x = torch.nn.functional.one_hot(x.long(), self.vocab_size)
+        x = torch.nn.functional.one_hot(x.long(), self.vocab_size).half()   
         # Appliquer l'embedding
         embedded = self.embedding(x.float())
         # Appeler la classe RNN pour obtenir output et hidden
         with torch.autocast(DEVICE):
             rnn_output, rnn_hidden = self.rnn(embedded)
-        return rnn_output.half(), rnn_hidden.half()
+        return rnn_output, rnn_hidden
