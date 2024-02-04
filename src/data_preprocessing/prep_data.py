@@ -11,6 +11,7 @@ from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 
 from global_variables import DATA_DIR, EXT_DATA_DIR
+from tqdm import tqdm
 
 n_processors = cpu_count()
 
@@ -180,7 +181,7 @@ import string
 def extract_word_frequency(data):
     word_freq = {"en": Counter(), "fr": Counter()}
 
-    for i, x in enumerate(data):
+    for i, x in tqdm(enumerate(data)):
         for lang in ["en", "fr"]:
             word_freq_dict = dict(
                 zip(
@@ -207,11 +208,14 @@ def extract_word_frequency(data):
 
 
 # Helper function to pad sequences to a specified length
-def pad_to_length(x, length, pad_value):
-    if len(x) < length:
-        return x + [pad_value] * (length - len(x))
+def pad_to_length(x, length, k):
+    sos_value = k - 2
+    pad_value = k - 1
+
+    if len(x) < length - 1:
+        return [sos_value] + x + [pad_value] * (length - len(x) - 1)
     else:
-        return x[:length]
+        return [sos_value] + x[: length - 1]
 
 
 # Function to process train data in parallel
@@ -395,15 +399,9 @@ def load_data(
     # Get most frequent English and French words
     most_frequent_english_words = bow_english["word"].apply(lambda x: str(x)).tolist()
     most_frequent_french_words = bow_french["word"].apply(lambda x: str(x)).tolist()
-    tokenized_most_frequent_english_words = mt_en.tokenize(
-        " ".join(most_frequent_english_words)
-    )[: kx - 1]
-    tokenized_most_frequent_french_words = mt_fr.tokenize(
-        " ".join(most_frequent_french_words)
-    )[: ky - 1]
-    tokenized_most_frequent_english_words.append("")
-    tokenized_most_frequent_french_words.append("")
-
+    tokenized_most_frequent_english_words= mt_en.tokenize(" ".join(most_frequent_english_words))[: kx - 2]
+    tokenized_most_frequent_french_words =  mt_fr.tokenize(" ".join(most_frequent_french_words))[: ky - 2]
+    # we'll use <sos> and <pad> and <unk> as special tokens
     if not only_vocab:
         to_id_transform = toIdTransform(
             tokenized_most_frequent_english_words,

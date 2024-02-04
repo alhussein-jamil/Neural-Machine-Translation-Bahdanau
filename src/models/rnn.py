@@ -1,7 +1,7 @@
 import torch
-import torch.nn.functional as F
 from torch import nn
 from torch.nn import init
+from global_variables import DEVICE
 
 
 class RNN(nn.Module):
@@ -33,7 +33,6 @@ class RNN(nn.Module):
         hidden_size,
         num_layers,
         device,
-        activation: nn.Module = nn.Tanh(),
         dropout=0,
         bidirectional=False,
         type="RNN",
@@ -62,15 +61,14 @@ class RNN(nn.Module):
             input_size,
             hidden_size,
             num_layers,
-            # nonlinearity="tanh" if activation is isinstance(activation, nn.Tanh) else "relu",
             batch_first=True,
             dropout=dropout,
             bidirectional=bidirectional,
         )
-
         # Initialize weights
         self.init_weights()
 
+    @torch.autocast(DEVICE)
     def forward(self, x, h0=None):
         """
         Forward pass of the RNN.
@@ -87,18 +85,22 @@ class RNN(nn.Module):
                 self.num_layers * (2 if self.rnn.bidirectional else 1),
                 x.size(0),
                 self.hidden_size,
-            ).to(self.device)
+                device=self.device,
+                dtype=torch.float16,
+            )
         c0 = None
         if isinstance(self.rnn, nn.LSTM):
             c0 = torch.zeros(
                 self.num_layers * (2 if self.rnn.bidirectional else 1),
                 x.size(0),
                 self.hidden_size,
-            ).to(self.device)
-            out, (hidden, cell) = self.rnn(x, (h0, c0))
+                device=self.device,
+                dtype=torch.float16,
+            )
+            out, (hidden, _) = self.rnn(x, (h0, c0))
         # Forward propagate RNN
         out, hidden = self.rnn(x, h0 if c0 is None else (h0, c0))
-        return out, hidden[0] if isinstance(hidden, tuple) else hidden
+        return out.half(), (hidden[0] if isinstance(hidden, tuple) else hidden).half()
 
     def init_weights(self):
         for name, param in self.named_parameters():
@@ -107,5 +109,5 @@ class RNN(nn.Module):
                     init.orthogonal_(param.data)
                 else:
                     init.normal_(param.data, mean=0, std=0.01)
-            else:
+            if "bias" in name:
                 init.constant_(param.data, val=0)

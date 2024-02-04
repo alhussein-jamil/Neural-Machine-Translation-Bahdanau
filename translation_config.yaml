@@ -1,14 +1,14 @@
-train_len: 4000000
+train_len: 100000   # Number of training examples
 val_len: null
-Tx: 30
-Ty: 30
+Tx: 15
+Ty: 15
 hidden_size: 1000
 embedding_size: 620
 max_out_units: 500
 vocab_size_en: 30000
 vocab_size_fr: 30000
 batch_size: 80
-epochs: 6.4
+epochs: 620
 vocab_source: "train"
 load_last_model: false  
 encoder_decoder: false

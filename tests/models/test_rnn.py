@@ -24,7 +24,6 @@ class TestRNN(unittest.TestCase):
             self.hidden_size,
             self.num_layers,
             self.device,
-            self.activation,
             self.dropout,
             type=self.type,
         ).to(self.device)
@@ -75,7 +74,6 @@ class TestRNN(unittest.TestCase):
             self.hidden_size,
             self.num_layers,
             self.device,
-            self.activation,
             self.dropout,
             type=self.type,
         ).to(self.device)
@@ -115,7 +113,6 @@ class TestRNN(unittest.TestCase):
             self.hidden_size,
             self.num_layers,
             self.device,
-            self.activation,
             self.dropout,
             type=self.type,
         ).to(self.device)

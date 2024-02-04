@@ -1,10 +1,13 @@
 import argparse
-
+import torch
 import torch
 import yaml
 
 from models.translation_models import AlignAndTranslate
 from src.data_preprocessing import load_data
+
+
+torch.backends.cudnn.benchmark = True
 
 # Define command-line arguments
 parser = argparse.ArgumentParser()
@@ -121,7 +124,6 @@ if __name__ == "__main__":
 
     alignment_cfg = dict(
         input_size=config["hidden_size"] * 3,
-        output_size=config["Tx"],
         device=device,
         dropout=0.0,
     )
@@ -130,13 +132,14 @@ if __name__ == "__main__":
         embedding_size=config["embedding_size"],
         max_out_units=config["max_out_units"],
         hidden_size=config["hidden_size"],
-        vocab_size=len(french_vocab) + 1,
+        vocab_size=len(french_vocab) + 2,
         device=device,
         dropout=0.0,
     )
 
     decoder_embedding_cfg = dict(
         embedding_size=config["embedding_size"],
+        vocab_size=len(french_vocab) + 2,
         device=device,
     )
 
@@ -145,6 +148,7 @@ if __name__ == "__main__":
         rnn=config_rnn_decoder,
         output_nn=output_nn_cfg,
         embedding=decoder_embedding_cfg,
+        Ty=config["Ty"],
         traditional=config["encoder_decoder"],
     )
 
@@ -153,7 +157,7 @@ if __name__ == "__main__":
         rnn_hidden_size=config["hidden_size"],
         rnn_num_layers=1,
         rnn_device=device,
-        vocab_size=len(english_vocab) + 1,
+        vocab_size=len(english_vocab) + 2,
         rnn_type="GRU",
         embedding_size=config["embedding_size"],
     )
@@ -161,7 +165,7 @@ if __name__ == "__main__":
     # Define training configuration
     training_cfg = dict(
         device=device,
-        output_vocab_size=len(french_vocab) + 1,
+        output_vocab_size=len(french_vocab) + 2,
         english_vocab=english_vocab,
         french_vocab=french_vocab,
         epochs=config["epochs"],
@@ -190,7 +194,13 @@ if __name__ == "__main__":
     for en, fr in zip(english_phrases, french_translation):
         to_translate.append(dict(translation=dict(en=en, fr=fr)))
 
-    translations = model.translate_sentence(to_translate)
+    sample, alignment = model.translate_sentence(to_translate)
+    for i, s in enumerate(sample):
+        print(f"Sample {i+1}")
+        en = s[0]
+        fr = s[1]
+        print(f"\tEnglish: {en}")
+        print(f"\tFrench: {fr}")
 
     # Train the model
     if args.test:
@@ -198,5 +208,3 @@ if __name__ == "__main__":
         breakpoint()
     else:
         model.train(train_loader=train_dataloader, val_loader=val_dataloader)
-
-    breakpoint()

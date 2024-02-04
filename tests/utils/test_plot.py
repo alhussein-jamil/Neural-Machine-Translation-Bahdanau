@@ -7,6 +7,7 @@ if __name__ == "__main__":
     french_ex = ["Le", "Chat", "S'est", "Assis", "Sur", "Le", "Tapis"]
 
     alignment = np.random.rand(len(french_ex), len(english_ex))
+    alignment = np.exp(alignment) / np.sum(np.exp(alignment), axis=0)
     data = {
         "Chat": (english_ex, french_ex, alignment),
         "Chaton": (english_ex, french_ex, alignment),

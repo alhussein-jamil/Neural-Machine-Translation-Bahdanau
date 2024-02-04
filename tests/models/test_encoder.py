@@ -6,6 +6,7 @@ from models.encoder import Encoder
 
 
 class TestEncoder(unittest.TestCase):
+    @torch.autocast("cpu")
     def test_forward(self):
         # Define batch_size and sequence_length
         batch_size = 32
@@ -23,9 +24,8 @@ class TestEncoder(unittest.TestCase):
 
         # Generate dummy data for the test
         input_data = torch.randint(0, 20, (batch_size, sequence_length))
-
-        # Call the forward function of the encoder
         rnn_output, rnn_hidden = encoder(input_data)
+        # Call the forward function of the encoder
 
         # Check that the output and hidden state have the expected dimensions
         self.assertEqual(rnn_output.shape, (batch_size, sequence_length, 20))
