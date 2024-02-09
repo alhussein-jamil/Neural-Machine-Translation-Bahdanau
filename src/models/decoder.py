@@ -57,8 +57,7 @@ class Alignment(nn.Module):
             torch.Tensor: Alignment vector.
         """
         return (
-            self.va(F.tanh(s_emb + h_emb).view(-1, self.hidden_size))
-            .view(h_emb.shape[0], -1)
+            self.va(F.tanh(s_emb + h_emb))
         )
 
 
@@ -205,18 +204,14 @@ class Decoder(nn.Module):
             torch.Tensor: Alignment vector.
             
         """
+        
         if not self.traditional:
             if h_emb is None:
                 raise ValueError("h_emb must be specified for attention model")
             # Initialize context vector as a learnable parameter
             if s_i is None:
                 s_i = (
-                    F.tanh(self.Ws(h[:, 0, self.rnn.hidden_size :]))
-                    .view(
-                        self.rnn.num_layers * (1 if not self.rnn.rnn.bidirectional else 2),
-                        h.size(0),
-                        self.rnn.hidden_size,
-                    )
+                    F.tanh(self.Ws(h[:,0,self.rnn.hidden_size :]))
                 )
             if y_i is None:
                 y_i = torch.zeros(
@@ -230,17 +225,14 @@ class Decoder(nn.Module):
             
             # Compute the embedding of the current context vector
             s_i_emb = self.alignment.nn_s(s_i.view(h.size(0), -1)).half()
-
+            
             # Compute alignment vector
-            a = self.alignment(s_i_emb.unsqueeze(1).repeat((1,h.size(1),1)),
-                                h_emb)
-
-        
+            a = self.alignment(s_i_emb.unsqueeze(1).repeat(1, h.size(1), 1),
+                                h_emb).squeeze(2)
+            
 
             # Apply softmax to obtain attention weights
             e = F.softmax(a.float(), dim=1)
-
-            
 
             # Compute context vector
             c = torch.bmm(h.transpose(1, 2), e.unsqueeze(2)).squeeze(2)
@@ -249,10 +241,9 @@ class Decoder(nn.Module):
             _, s_i = self.rnn(
                 torch.cat((embed_y_i.unsqueeze(1).float(),
                             c.unsqueeze(1).float()), dim=2),
-                              s_i
+                              s_i.unsqueeze(0)
             )
-            
-
+            s_i = s_i.squeeze()
 
             # Embed the output token and compute the output of the output network
             y_i = self.output_nn(

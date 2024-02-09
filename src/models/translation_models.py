@@ -82,6 +82,7 @@ class AlignAndTranslate(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Forward pass through encoder and decoder
         encoder_output, _ = self.encoder(x)
+        
         h_emb = self.decoder.alignment.nn_h(encoder_output)
         s_i = None # the initialization is directly handled in the decoder
         y_i= None # the initialization is directly handled in the decoder
@@ -144,7 +145,7 @@ class AlignAndTranslate(nn.Module):
             dir = self.best_models_dir
             if not os.listdir(self.best_models_dir):
                 print(f"No model found in {self.best_models_dir}")
-                if not os.listdir(self.models_dir):
+                if not True and not os.listdir(self.models_dir):
                     print(f"No model found in {self.models_dir}")
                     return
                 else:
@@ -322,22 +323,21 @@ class AlignAndTranslate(nn.Module):
             alignments = torch.zeros(batch_size, self.Ty, self.Ty, device=self.device)
 
             for b in range(batch_size):
-                first_candidate_seq = torch.full((self.Ty,), unk_token, device=self.device, dtype=torch.long)
+                first_candidate_seq = torch.full((self.Ty+2,), pad_token, device=self.device, dtype=torch.long)
                 first_candidate_seq[0] = sos_token
                 candidates = [(first_candidate_seq, 0.0, None, [])]
 
-                for t in range(self.Ty):
+                for t in range(self.Ty+1):
                     new_candidates = []
                     for seq, score, s_i, align in candidates:
                         if seq[t] == pad_token:
                             new_candidates.append((seq, score, s_i, align))
                             continue
-
                         y_i, s_i, a_i = self.decoder(t, encoder_output[b:b+1], h_emb[b:b+1],
                                                     s_i, torch.nn.functional.one_hot(seq[t:t+1], num_classes=vocab_size).float())
                         scores = F.log_softmax(y_i, dim=-1)
                         cumulative_scores = score + scores.squeeze()
-
+                        s_i = s_i.view(1,-1)
                         top_k_scores, top_k_indices = torch.topk(cumulative_scores, beam_size)
 
                         for i in range(beam_size):
@@ -361,7 +361,7 @@ class AlignAndTranslate(nn.Module):
                                 if repetition:
                                     break
                             if not repetition:
-                                new_seq[t] = top_k_indices[i]
+                                new_seq[t+1] = top_k_indices[i]
                                 new_score = top_k_scores[i]
                                 new_align = align + [a_i]
                                 new_candidates.append((new_seq, new_score, s_i, new_align))
@@ -369,8 +369,15 @@ class AlignAndTranslate(nn.Module):
                     candidates = sorted(new_candidates, key=lambda x: x[1], reverse=True)[:beam_size]
 
                 best_seq, _, _, best_align = max(candidates, key=lambda x: x[1])
+                best_seq = best_seq[1: -1]
+                #remove first alignment
+                best_align = best_align[1:]
+                #remove last 
                 output[b] = best_seq
-                alignments[b] = torch.stack(best_align, dim=0).squeeze()
+                try:
+                    alignments[b][:len(best_align)] = torch.stack(best_align, dim=0).squeeze()
+                except:
+                    pass
 
         return output, alignments
 
@@ -382,9 +389,9 @@ class AlignAndTranslate(nn.Module):
         source_list = [s.split(" ") for s in source]
         prediction_list = [p.split(" ") for p in prediction]
         alls = []
-        alignments = allignments.cpu().detach().numpy()
+        alignments = allignments.cpu().detach().numpy().swapaxes(1, 2)
         for i in range(alignments.shape[0]):
-            alls.append(alignments[i, : len(prediction_list[i]), : len(source_list[i])])
+            alls.append(alignments[i, : len(prediction_list[i]),: len(source_list[i])])
 
         data = {
             f"phrase {i}: bleu-score of {int(titles[i]*100.0)}%": (

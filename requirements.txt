@@ -3,7 +3,6 @@ numba
 numpy
 pandas
 scikit-learn
-tensorflow
 torch
 torchaudio
 torchvision

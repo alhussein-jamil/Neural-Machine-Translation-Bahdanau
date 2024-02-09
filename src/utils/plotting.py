@@ -45,10 +45,10 @@ def plot_alignment(
             alignment, axis=1
         )
         # make allignment values between 0 and 1 with 1 being the max value
-        alignment = (alignment - alignment_min[:, None]) / (
-            alignment_max[:, None] - alignment_min[:, None]
-        )
-
+        if (alignment_max - alignment_min).any():
+            alignment = (alignment - alignment_min[:, None]) / (
+                alignment_max[:, None] - alignment_min[:, None]
+            )
         # Plot the alignment matrix
         ax.imshow(
             alignment, cmap="gray", aspect="auto"

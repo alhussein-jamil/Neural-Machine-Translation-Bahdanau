@@ -1,6 +1,5 @@
 import argparse
 import torch
-import torch
 import yaml
 
 from models.translation_models import AlignAndTranslate
@@ -118,7 +117,7 @@ if __name__ == "__main__":
         hidden_size=config["hidden_size"],
         num_layers=1,
         device=device,
-        type="GRU",
+        type="LSTM",
         bidirectional=False,
     )
 
@@ -158,7 +157,7 @@ if __name__ == "__main__":
         rnn_num_layers=1,
         rnn_device=device,
         vocab_size=len(english_vocab) + 2,
-        rnn_type="GRU",
+        rnn_type="LSTM",
         embedding_size=config["embedding_size"],
     )
 

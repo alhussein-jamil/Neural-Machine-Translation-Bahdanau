@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch.nn.functional as F
 
 from models.rnn import RNN
 from global_variables import DEVICE

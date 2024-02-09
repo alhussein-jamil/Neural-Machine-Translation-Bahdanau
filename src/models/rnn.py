@@ -98,6 +98,7 @@ class RNN(nn.Module):
                 dtype=torch.float16,
             )
             out, (hidden, _) = self.rnn(x, (h0, c0))
+            
         # Forward propagate RNN
         out, hidden = self.rnn(x, h0 if c0 is None else (h0, c0))
         return out.half(), (hidden[0] if isinstance(hidden, tuple) else hidden).half()
