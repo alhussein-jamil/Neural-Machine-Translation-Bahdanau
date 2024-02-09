@@ -1,4 +1,5 @@
 from typing import Any, Dict
+from typing import Any, Dict
 
 import torch
 import torch.nn as nn
@@ -6,6 +7,7 @@ import torch.nn.functional as F
 
 from models.fcnn import FCNN
 from models.rnn import RNN
+from global_variables import DEVICE
 from global_variables import DEVICE
 
 
@@ -36,7 +38,9 @@ class Alignment(nn.Module):
             std=0.001,
         )
         self.va = FCNN(
+        self.va = FCNN(
             input_size=self.hidden_size,
+            output_size=1,
             output_size=1,
             device=device,
             dropout=dropout,
@@ -44,6 +48,7 @@ class Alignment(nn.Module):
             std=0.0,
         )
 
+    @torch.autocast(DEVICE)
     @torch.autocast(DEVICE)
     def forward(self, s_emb: torch.Tensor, h_emb: torch.Tensor) -> torch.Tensor:
         """
@@ -113,6 +118,7 @@ class OutputNetwork(nn.Module):
         self.output_size = vocab_size
 
     @torch.autocast(DEVICE)
+    @torch.autocast(DEVICE)
     def forward(
         self, s_i: torch.Tensor, y_i: torch.Tensor, c_i: torch.Tensor
     ) -> torch.Tensor:
@@ -129,11 +135,13 @@ class OutputNetwork(nn.Module):
         """
         # based on the article Maxout Networks
         t_tilde = (self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i))
+        t_tilde = (self.u_o(s_i) + self.v_o(y_i) + self.c_o(c_i))
 
         # sep odd and even
         t_even = t_tilde[:, 0::2]
         t_odd = t_tilde[:, 1::2]
 
+        return self.output_nn(torch.max(t_even, t_odd))
         return self.output_nn(torch.max(t_even, t_odd))
 
 
@@ -145,6 +153,7 @@ class Decoder(nn.Module):
         embedding: Dict[str, Any],
         output_nn: Dict[str, Any],
         traditional: bool = False,
+        Ty: int = 10,
         Ty: int = 10,
     ) -> None:
         super().__init__()
@@ -165,8 +174,10 @@ class Decoder(nn.Module):
         # Embedding layer
         self.embedding = FCNN(
             input_size=embedding["vocab_size"],
+            input_size=embedding["vocab_size"],
             output_size=embedding["embedding_size"],
             device=embedding["device"],
+
 
         )
         # self.batch_norm_enc = nn.BatchNorm1d(2*rnn["hidden_size"])
@@ -178,7 +189,12 @@ class Decoder(nn.Module):
             output_size=output_nn["vocab_size"],
         )
         self.Ty = Ty
+        self.Ty = Ty
         # Initialize context vector as a learnable parameter
+        self.Ws = FCNN(
+            input_size=rnn["hidden_size"],
+            output_size=rnn["hidden_size"],
+            device=embedding["device"],
         self.Ws = FCNN(
             input_size=rnn["hidden_size"],
             output_size=rnn["hidden_size"],
@@ -188,10 +204,18 @@ class Decoder(nn.Module):
 
     @torch.autocast(DEVICE)
     def forward(self, t: int , h, h_emb = None,s_i = None, y_i = None):
+
+    @torch.autocast(DEVICE)
+    def forward(self, t: int , h, h_emb = None,s_i = None, y_i = None):
         """
         Forward pass of the Decoder module.
 
         Args:
+            t (int): The current time step.
+            h (torch.Tensor): The hidden states from the encoder.
+            h_emb (torch.Tensor): The embeddings of the hidden states from the encoder.
+            s_i (torch.Tensor): The context from the decoder.
+            y_i (torch.Tensor): The current output token.
             t (int): The current time step.
             h (torch.Tensor): The hidden states from the encoder.
             h_emb (torch.Tensor): The embeddings of the hidden states from the encoder.
@@ -206,6 +230,8 @@ class Decoder(nn.Module):
         """
         
         if not self.traditional:
+            if h_emb is None:
+                raise ValueError("h_emb must be specified for attention model")
             if h_emb is None:
                 raise ValueError("h_emb must be specified for attention model")
             # Initialize context vector as a learnable parameter
@@ -253,7 +279,19 @@ class Decoder(nn.Module):
            
             # Store the output in the output tensor
             return y_i, s_i, e
+            # Embed the output token and compute the output of the output network
+            y_i = self.output_nn(
+                s_i.view(h.size(0), -1), embed_y_i.squeeze(1), c
+            )
+
+           
+            # Store the output in the output tensor
+            return y_i, s_i, e
         else:
+            with torch.autocast(DEVICE):
+                y_i_emb, s_i = self.rnn(h[:, t,:].view(h.shape[0], 1, -1),s_i)
+            y_i = self.relaxation_nn(y_i_emb)
+            return y_i, s_i, None
             with torch.autocast(DEVICE):
                 y_i_emb, s_i = self.rnn(h[:, t,:].view(h.shape[0], 1, -1),s_i)
             y_i = self.relaxation_nn(y_i_emb)

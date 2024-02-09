@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn import init
 from global_variables import DEVICE
+from global_variables import DEVICE
 
 
 class RNN(nn.Module):
@@ -69,6 +70,7 @@ class RNN(nn.Module):
         self.init_weights()
 
     @torch.autocast(DEVICE)
+    @torch.autocast(DEVICE)
     def forward(self, x, h0=None):
         """
         Forward pass of the RNN.
@@ -88,6 +90,9 @@ class RNN(nn.Module):
                 device=self.device,
                 dtype=torch.float16,
             )
+                device=self.device,
+                dtype=torch.float16,
+            )
         c0 = None
         if isinstance(self.rnn, nn.LSTM):
             c0 = torch.zeros(
@@ -102,6 +107,7 @@ class RNN(nn.Module):
         # Forward propagate RNN
         out, hidden = self.rnn(x, h0 if c0 is None else (h0, c0))
         return out.half(), (hidden[0] if isinstance(hidden, tuple) else hidden).half()
+        return out.half(), (hidden[0] if isinstance(hidden, tuple) else hidden).half()
 
     def init_weights(self):
         for name, param in self.named_parameters():
@@ -110,5 +116,6 @@ class RNN(nn.Module):
                     init.orthogonal_(param.data)
                 else:
                     init.normal_(param.data, mean=0, std=0.01)
+            if "bias" in name:
             if "bias" in name:
                 init.constant_(param.data, val=0)

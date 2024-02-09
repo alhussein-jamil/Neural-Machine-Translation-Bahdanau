@@ -3,12 +3,14 @@ import math
 import os
 from typing import List
 from torch.cuda.amp import GradScaler
+from torch.cuda.amp import GradScaler
 import torch
 from sacremoses import MosesDetokenizer, MosesTokenizer
 from torch import nn
 from torch.nn import functional as F
 
 from data_preprocessing import *
+from global_variables import *
 from global_variables import *
 from metrics import bleu_seq
 from metrics.losses import Loss
@@ -31,6 +33,8 @@ class AlignAndTranslate(nn.Module):
         self.optimizer = training_config.get(
         "optimizer", torch.optim.Adam(self.parameters(), amsgrad=True,lr = 0.001)
         ) # We omit the usage of Adadelt as it's a variant of Adam
+        "optimizer", torch.optim.Adam(self.parameters(), amsgrad=True,lr = 0.001)
+        ) # We omit the usage of Adadelt as it's a variant of Adam
         self.device = training_config.get("device", "cpu")
         self.epochs = training_config.get("epochs", 100)
         self.print_every = training_config.get("print_every", 100)
@@ -39,15 +43,36 @@ class AlignAndTranslate(nn.Module):
         self.best_val_loss = float("inf")
         self.source_vocab = training_config.get("english_vocab", [])
         self.target_vocab = training_config.get("french_vocab", [])
+        self.source_vocab = training_config.get("english_vocab", [])
+        self.target_vocab = training_config.get("french_vocab", [])
         self.load_last_checkpoints = training_config.get("load_last_model", False)
         self.beam_search_flag = training_config.get("beam_search", False)
         self.start_time = self.timestamp
         self.Tx = training_config["Tx"]
         self.Ty = training_config["Ty"]
         self.scaler = GradScaler()
+        self.scaler = GradScaler()
 
         self.train_losses = []
         self.val_losses = [1e10]
+        os.makedirs(DATA_DIR / "trained_models/", exist_ok=True)
+        if self.load_last_checkpoints:
+            folders = os.listdir(DATA_DIR / "trained_models/")
+            if len(folders) > 0:
+                self.start_time = sorted(folders)[-1]
+
+        time = self.start_time
+        if self.load_last_checkpoints:
+                try:
+                    self.load_last_model()
+                except:
+                    time = self.timestamp
+        self.create_folders(time)
+
+
+    def create_folders(self, time):
+        
+        self.local_dir = DATA_DIR / ("trained_models/" + time)
         os.makedirs(DATA_DIR / "trained_models/", exist_ok=True)
         if self.load_last_checkpoints:
             folders = os.listdir(DATA_DIR / "trained_models/")
@@ -78,6 +103,7 @@ class AlignAndTranslate(nn.Module):
         os.makedirs(self.best_models_dir, exist_ok=True)
         os.makedirs(self.plot_dir, exist_ok=True)
 
+    @torch.autocast(DEVICE)
     @torch.autocast(DEVICE)
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Forward pass through encoder and decoder
@@ -115,6 +141,12 @@ class AlignAndTranslate(nn.Module):
         nn.utils.clip_grad_norm_(self.parameters(), 1.0) # Gradient Norm Clipping (uncomment if needed)
         self.scaler.step(self.optimizer)
         self.scaler.update()
+        self.scaler.scale(loss).backward()
+        # # Gradient Value Clipping
+        self.scaler.unscale_(self.optimizer)
+        nn.utils.clip_grad_norm_(self.parameters(), 1.0) # Gradient Norm Clipping (uncomment if needed)
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
 
         return loss.item(), output, allignments
 
@@ -142,6 +174,7 @@ class AlignAndTranslate(nn.Module):
     def load_last_model(self) -> None:
         # Load last model
         try:
+            dir = self.best_models_dir
             dir = self.best_models_dir
             if not os.listdir(self.best_models_dir):
                 print(f"No model found in {self.best_models_dir}")
@@ -184,6 +217,12 @@ class AlignAndTranslate(nn.Module):
                         self.display(output, allignments, x, y, val=False)
                     # stylish_stat_print(STATS)
                     # stylish_stat_print(WEIGHTS_STATS)
+                    print(f"Epoch: {epoch}, Batch: {i}, Loss: {loss}, Mean Loss: {sum(losses) / len(losses)}")
+                    # plot a sample 
+                    if i % (self.print_every * 10) == 0:
+                        self.display(output, allignments, x, y, val=False)
+                    # stylish_stat_print(STATS)
+                    # stylish_stat_print(WEIGHTS_STATS)
                     # add losses to a text file
                 if i % self.save_every == 0:
                     self.save_model()
@@ -218,6 +257,7 @@ class AlignAndTranslate(nn.Module):
                         self.train_losses[-1],
                         self.val_losses[-1],
                         torch.mean(self.bleu_scores[-1]).half(),
+                        torch.mean(self.bleu_scores[-1]).half(),
                     )
                 )
 
@@ -234,6 +274,16 @@ class AlignAndTranslate(nn.Module):
         val: bool = True,
     ):
         random_idx = torch.randint(0, len(x), (4,))
+        if self.beam_search_flag:
+            prediction_idx, _ = self.beam_search_decoder(x[random_idx])
+        else:
+            prediction = output[random_idx]
+            prediction[:, :, -3] = torch.min(
+                prediction
+            )
+            
+            prediction_idx = self.greedy_search_batch(output[random_idx])
+
         if self.beam_search_flag:
             prediction_idx, _ = self.beam_search_decoder(x[random_idx])
         else:
@@ -271,6 +321,7 @@ class AlignAndTranslate(nn.Module):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output, allignments = self.forward(x.to(self.device))
 
+
             loss = self.calc_loss(output, y.to(self.device))
             total_loss += loss.item()
             if i == 0:
@@ -291,11 +342,14 @@ class AlignAndTranslate(nn.Module):
             # Sample a translation from the model
             source_sentences.append(
                 self.idx_to_word(s, self.source_vocab, language="en")
+                self.idx_to_word(s, self.source_vocab, language="en")
             )
             translation_sentences.append(
                 self.idx_to_word(t, self.target_vocab, language="fr")
+                self.idx_to_word(t, self.target_vocab, language="fr")
             )
             prediction_sentences.append(
+                self.idx_to_word(p, self.target_vocab, language="fr")
                 self.idx_to_word(p, self.target_vocab, language="fr")
             )
 
@@ -303,6 +357,9 @@ class AlignAndTranslate(nn.Module):
 
     def idx_to_word(self, idx: torch.Tensor, vocab: List, language="fr") -> str:
         # Convert index to word
+        idx = idx.cpu().detach().int().numpy()
+        
+        tokens = list(vocab[idx[(idx < len(vocab) - 1)]])
         idx = idx.cpu().detach().int().numpy()
         
         tokens = list(vocab[idx[(idx < len(vocab) - 1)]])
@@ -415,6 +472,7 @@ class AlignAndTranslate(nn.Module):
         original_sentences = []
         predicted_sentences = []
         for _, val_sample in enumerate(dataloader):
+        for _, val_sample in enumerate(dataloader):
             x, y = val_sample["english"]["idx"], val_sample["french"]["idx"]
             output, _ = self.forward(x.to(self.device))
             prediction_idx = torch.argmax(output, dim=-1)
@@ -435,6 +493,7 @@ class AlignAndTranslate(nn.Module):
         tokenizer_fr = MosesTokenizer(lang="fr")
         tokenizer = TokenizerWrapper(tokenizer_en, tokenizer_fr)
         to_id = toIdTransform(self.source_vocab, self.target_vocab, torch)
+        to_id = toIdTransform(self.source_vocab, self.target_vocab, torch)
 
         # Initialize tensors for train and validation data
         idx_tensor_en = torch.zeros((len(sentences), self.Tx), dtype=torch.int16)
@@ -453,6 +512,8 @@ class AlignAndTranslate(nn.Module):
             self.Ty,
             len(self.source_vocab),
             len(self.target_vocab),
+            len(self.source_vocab),
+            len(self.target_vocab),
             False,
         )
 
@@ -462,6 +523,10 @@ class AlignAndTranslate(nn.Module):
             output
         )  # set the <unk> token to the minimum value so that it is not selected
 
+        if self.beam_search_flag:
+            prediction_idx, _ = self.beam_search_decoder(idx_tensor_en)
+        else:
+            prediction_idx = self.greedy_search_batch(output)
         if self.beam_search_flag:
             prediction_idx, _ = self.beam_search_decoder(idx_tensor_en)
         else:
